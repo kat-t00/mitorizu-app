@@ -1,0 +1,3779 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>住環境見取り図アプリ</title>
+<style>
+/* ポップで視認性の良いデザイン（丸ゴシック・パステル・角丸）。
+   genogram_web/style.cssと同じデザイン言語（配色トークン・角丸ボタン等）を踏襲しつつ、
+   暖色寄りの配色にしてジェノグラムアプリと見分けやすくしている。 */
+
+:root {
+  --color-bg: #fbf6ee;
+  --color-header-start: #ffb37a;
+  --color-header-end: #ff8a8a;
+  --color-primary: #ff8a4c;
+  --color-primary-dark: #e0672a;
+  --color-secondary: #4ecdc4;
+  --color-secondary-dark: #3bb3aa;
+  --color-card: #ffffff;
+  --color-border: #f0ddc4;
+  --color-text: #2f3b52;
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Hiragino Maru Gothic ProN", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-header {
+  background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
+  padding: 8px 16px;
+  box-shadow: var(--shadow-soft);
+  flex: 0 0 auto;
+}
+
+.app-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.app-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-credit:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.app-credit svg {
+  fill: currentColor;
+}
+
+.tool-button {
+  border: none;
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.tool-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-soft);
+}
+
+.tool-button-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.tool-button-small {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #f8ede0;
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tool-button-small:hover {
+  background: #f0ddc4;
+}
+
+.tool-button-danger {
+  color: #c0392b;
+}
+
+.app-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.side-panel {
+  width: 300px;
+  flex: 0 0 auto;
+  background: var(--color-card);
+  border-right: 2px solid var(--color-border);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.side-panel h2 {
+  font-size: 14px;
+  margin: 18px 0 8px;
+  color: var(--color-primary-dark);
+}
+
+.side-panel h2:first-child {
+  margin-top: 0;
+}
+
+.side-panel-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #6b7c93;
+  line-height: 1.5;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.field-label input,
+.field-label textarea,
+.modal-box input,
+.modal-box select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fffdf9;
+  resize: vertical;
+}
+
+.checkbox-row,
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.checkbox-row input,
+.radio-row input {
+  width: auto;
+  margin: 0;
+}
+
+.fixture-palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.palette-button {
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  padding: 8px 6px;
+  background: #fffdf9;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.palette-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  background: #fff3e6;
+}
+
+.canvas-area {
+  flex: 1 1 auto;
+  position: relative;
+  min-width: 0;
+}
+
+/* 部屋・テキスト追加や元に戻す等、キャンバス操作系のボタンを作業フィールドの
+   左上に浮かせて表示する（ジェノグラムアプリと同じ配置。ヘッダーは書類全体の
+   操作だけに絞り、キャンバス固有の操作は作業フィールド側にまとめる） */
+.canvas-overlay-toolbars {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.canvas-toolbar .add-button {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.zoom-control {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 4px 6px;
+  box-shadow: var(--shadow-soft);
+}
+
+.zoom-btn {
+  border: none;
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-card);
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.zoom-percent {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 38px;
+  text-align: center;
+}
+
+.canvas-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #fffdf9;
+  touch-action: none;
+}
+
+/* ===== 部屋 ===== */
+.room-fill {
+  fill: #fff8ee;
+  stroke: none;
+  pointer-events: all; /* 部屋の内側をクリックしてもドラッグ開始できるように */
+}
+
+.room-wall-line {
+  stroke: #4a3418;
+  stroke-width: 3;
+  stroke-linecap: square;
+}
+
+.room-label-bg {
+  fill: rgba(255, 253, 249, 0.88);
+  stroke: none;
+  pointer-events: none;
+}
+
+.room-label {
+  font-size: 14px;
+  font-weight: bold;
+  fill: var(--color-text);
+  pointer-events: none;
+}
+
+.room-tatami {
+  font-size: 11px;
+  fill: #6b7c93;
+  pointer-events: none;
+}
+
+.room-resize-handle {
+  fill: var(--color-primary);
+  opacity: 0.75;
+  cursor: nwse-resize;
+}
+
+.rotate-handle-line {
+  stroke: var(--color-secondary-dark);
+  stroke-width: 1.5;
+  stroke-dasharray: 2, 2;
+}
+
+.rotate-handle-knob {
+  fill: var(--color-secondary);
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+
+.rotate-handle-knob:active {
+  cursor: grabbing;
+}
+
+/* ===== 家具・設備アイコン ===== */
+.fixture-hit-area {
+  fill: transparent; /* fill:noneだとクリックを拾えないため、透明色を明示して当たり判定を持たせる */
+  stroke: none;
+}
+
+.fixture-node .fixture-icon {
+  fill: #ffffff;
+  stroke: #2f3b52;
+  stroke-width: 2;
+  color: #2f3b52; /* currentColorを使う矢印などに反映 */
+}
+
+.fixture-node.fixture-door .fixture-icon,
+.fixture-node.fixture-sliding_door .fixture-icon,
+.fixture-node.fixture-double_door .fixture-icon,
+.fixture-node.fixture-parent_child_door .fixture-icon,
+.fixture-node.fixture-folding_door .fixture-icon {
+  stroke: #4a3418;
+}
+
+.fixture-node.fixture-stairs .fixture-icon {
+  stroke: #4a3418;
+  color: #4a3418;
+}
+
+.fixture-node.fixture-step .fixture-icon,
+.fixture-node.fixture-ramp .fixture-icon {
+  stroke: #4d8fff;
+}
+
+.fixture-node.fixture-handrail_v .fixture-icon,
+.fixture-node.fixture-handrail_h .fixture-icon,
+.fixture-node.fixture-handrail_l .fixture-icon {
+  stroke: #e0672a;
+  fill: #e0672a;
+}
+
+/* 同じ壁で開口部が重なっているドア・窓への警告表示。
+   種類ごとの色指定と同じ詳細度なので、あとに書くことで確実に上書きする。 */
+.fixture-node.fixture-conflict .fixture-icon {
+  stroke: #e11d48;
+}
+
+.fixture-node.fixture-conflict .fixture-hit-area {
+  fill: rgba(225, 29, 72, 0.14);
+}
+
+.fixture-label {
+  font-size: 11px;
+  fill: #6b7c93;
+  pointer-events: none;
+}
+
+.fixture-mini-label {
+  font-size: 10px;
+  fill: #2f3b52;
+  stroke: none;
+}
+
+.custom-fixture-name {
+  font-weight: bold;
+}
+
+/* ===== テキスト注釈 ===== */
+.annotation-bg {
+  fill: #fff3d6;
+  stroke: #e8c874;
+  stroke-width: 1.5;
+}
+
+.annotation-text {
+  font-size: 13px;
+  fill: var(--color-text);
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* ===== ポップアップ（部屋・家具・テキストのその場編集） ===== */
+.edit-popup {
+  position: fixed;
+  background: var(--color-card);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 14px;
+  width: 240px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.edit-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.popup-hint-text {
+  font-size: 11px;
+  color: #6b7c93;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.edit-popup label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.edit-popup input,
+.edit-popup textarea {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 8px;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fffdf9;
+  resize: vertical;
+}
+
+.popup-action-button,
+.popup-delete-button {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.popup-action-button {
+  background: #eaf1fb;
+  color: var(--color-primary-dark);
+}
+
+.popup-delete-button {
+  background: #ffe3e0;
+  color: #c0392b;
+}
+
+.popup-close-x {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.popup-close-x:hover {
+  background: #f0ddc4;
+}
+
+/* ===== モーダル ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 40, 20, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: var(--color-card);
+  border-radius: 18px;
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.modal-box h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.usage-guide-list {
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ===== 保存データ一覧 ===== */
+.case-list-empty {
+  font-size: 13px;
+  color: #6b7c93;
+}
+
+.case-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  background: #fffdf9;
+  margin-bottom: 8px;
+}
+
+.case-list-name {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.case-list-meta {
+  font-size: 11px;
+  color: #6b7c93;
+}
+
+.case-list-actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* ===== 保存トースト ===== */
+.save-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #2f3b52;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: bold;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.save-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.save-toast.hidden {
+  display: none;
+}
+
+/* ===== PDF印刷エリア ===== */
+#print-area {
+  display: none;
+}
+
+@media print {
+  body > *:not(#print-area) {
+    display: none !important;
+  }
+  #print-area {
+    display: flex !important;
+    flex-direction: column;
+    font-family: -apple-system, "Hiragino Maru Gothic ProN", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  }
+  #print-area h2 {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #2f3b52;
+  }
+  #print-area .print-meta {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #6b7c93;
+  }
+  #print-area .print-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #print-area.orientation-landscape .print-body {
+    flex-direction: row;
+    gap: 14px;
+  }
+  #print-area .print-diagram-col {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+  }
+  #print-area .print-text-col {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #print-area.orientation-landscape .print-text-col {
+    flex: 0 0 78mm;
+    min-height: 0;
+    overflow: hidden;
+    border-left: 1px solid #d3e3f0;
+    padding-left: 12px;
+  }
+  #print-area .print-legend {
+    flex: 0 0 auto;
+  }
+  #print-area.orientation-portrait .print-legend {
+    padding-top: 8px;
+    border-top: 1px solid #d3e3f0;
+  }
+  #print-area .print-legend h3 {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: #e0672a;
+  }
+  #print-area .print-legend ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #4a5a72;
+  }
+  #print-area .print-svg-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+  }
+  #print-area svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #print-area .print-note {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  #print-area.orientation-portrait .print-note {
+    flex: 0 0 auto;
+    padding-top: 10px;
+    border-top: 2px solid #d3e3f0;
+  }
+  #print-area .print-note h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #e0672a;
+  }
+  #print-area .print-note p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #2f3b52;
+  }
+}
+
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-top">
+      <h1>🏠 住環境見取り図アプリ</h1>
+      <a class="app-credit" href="https://x.com/kat_t0o" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.6l-5.2-6.8L5 22H1.9l8.1-9.3L1 2h6.7l4.7 6.2L18.9 2zM16.6 20h1.9L7.5 4H5.5L16.6 20z"/></svg>
+        作成：ケアマネカトゥ（@kat_t0o）
+      </a>
+    </div>
+    <nav class="toolbar">
+      <button id="btn-new" class="tool-button" type="button">🆕 はじめから作成</button>
+      <button id="btn-case-list" class="tool-button" type="button">📁 保存データ一覧</button>
+      <button id="btn-save-file" class="tool-button" type="button">💾 データ保存</button>
+      <button id="btn-open" class="tool-button" type="button">📂 手動でデータを開く</button>
+      <input type="file" id="file-input" accept="application/json" class="hidden" />
+      <button id="btn-export-png" class="tool-button" type="button">🖼 画像出力</button>
+      <button id="btn-export-pdf" class="tool-button" type="button">📄 PDF出力</button>
+      <button id="btn-usage-guide" class="tool-button" type="button">❓ 使い方ガイド</button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <aside class="side-panel">
+      <h2>📋 基本情報</h2>
+      <label class="field-label">対象者名・案件名
+        <input type="text" id="doc-title-input" placeholder="例：〇〇様邸" />
+      </label>
+      <label class="field-label">備考
+        <textarea id="note-textarea" rows="3" placeholder="動線や気づいた点のメモなど"></textarea>
+      </label>
+
+      <h2>🪑 家具・設備を追加</h2>
+      <p class="side-panel-hint">クリックすると図の中央に追加されます。追加後はドラッグで移動、クリックで編集できます。</p>
+      <div id="fixture-palette" class="fixture-palette"></div>
+    </aside>
+
+    <main class="canvas-area">
+      <svg id="canvas" class="canvas-svg"></svg>
+      <div id="save-toast" class="save-toast hidden">💾 保存しました</div>
+
+      <div class="canvas-overlay-toolbars">
+        <div class="canvas-toolbar">
+          <button id="btn-add-room" class="tool-button add-button" type="button">➕ 部屋を追加</button>
+          <button id="btn-add-text" class="tool-button add-button" type="button">➕ テキストを追加</button>
+          <button id="btn-fit-view" class="tool-button" type="button">🔍 全体表示</button>
+          <button id="btn-undo" class="tool-button" type="button" disabled>↩️ 元に戻す</button>
+          <button id="btn-redo" class="tool-button" type="button" disabled>↪️ やり直す</button>
+        </div>
+      </div>
+
+      <div class="zoom-control">
+        <button id="btn-zoom-out" class="zoom-btn" type="button">－</button>
+        <span id="zoom-level" class="zoom-percent">100%</span>
+        <button id="btn-zoom-in" class="zoom-btn" type="button">＋</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- 新規作成モーダル -->
+  <div id="new-case-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>🆕 はじめから作成</h2>
+      <label class="field-label">対象者名・案件名（必須）
+        <input type="text" id="new-case-title" placeholder="例：〇〇様邸／主任ケアマネ更新研修用" />
+      </label>
+      <label class="field-label">メモ（任意）
+        <input type="text" id="new-case-label" placeholder="例：研修提出用" />
+      </label>
+      <div class="modal-actions">
+        <button id="new-case-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="new-case-confirm" type="button" class="tool-button tool-button-primary">✨ この内容で始める</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自由入力の家具を追加するモーダル -->
+  <div id="custom-fixture-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>✏️ 自由入力の家具を追加</h2>
+      <p class="side-panel-hint">家具・設備の一覧に無いもの（例：押入、仏壇、エアコン、PC台など）を、形と名前を決めて配置できます。</p>
+      <label class="field-label">名前（必須）
+        <input type="text" id="custom-fixture-name" placeholder="例：押入" />
+      </label>
+      <p class="field-label">形</p>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="rect" checked /> 四角</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="circle" /> 丸</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="triangle" /> 三角</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="diamond" /> ひし形</label>
+      <div class="modal-actions">
+        <button id="custom-fixture-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="custom-fixture-confirm" type="button" class="tool-button tool-button-primary">✨ この内容で追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存データ一覧モーダル -->
+  <div id="case-list-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2>📁 保存データ一覧</h2>
+        <button id="case-list-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <div id="case-list-container"></div>
+    </div>
+  </div>
+
+  <!-- 出力オプションモーダル -->
+  <div id="export-options-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2 id="export-options-title">出力</h2>
+        <button id="export-options-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="export-transparent" />
+        透明背景で出力する
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="export-transparent-floor" />
+        部屋の床の色も透明にする（白基調の書式に貼る時など）
+      </label>
+      <div id="export-pdf-only-options">
+        <label class="field-label">作成者名（任意）
+          <input type="text" id="export-creator-name" placeholder="ここに入力してください" />
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="export-include-legend" checked />
+          図記号の意味（凡例）を入れる
+        </label>
+        <p class="field-label">用紙の向き</p>
+        <label class="radio-row"><input type="radio" name="export-orientation" id="export-orientation-auto" value="auto" checked /> 自動（図の形に合わせる）</label>
+        <label class="radio-row"><input type="radio" name="export-orientation" value="portrait" /> 縦</label>
+        <label class="radio-row"><input type="radio" name="export-orientation" value="landscape" /> 横</label>
+      </div>
+      <div class="modal-actions">
+        <button id="export-options-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="export-options-confirm" type="button" class="tool-button tool-button-primary">⬇ ダウンロードする</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使い方ガイドモーダル -->
+  <div id="usage-guide-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2>📘 使い方ガイド</h2>
+        <button id="usage-guide-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <ol class="usage-guide-list">
+        <li>「🆕 はじめから作成」で対象者名・案件名を入力して始めます。</li>
+        <li>「➕ 部屋を追加」で部屋（四角）を配置。ドラッグで移動、四隅どこからでもドラッグで大きさを変えられます（つかんだ角の反対側は動きません）。部屋同士を近づけると自動的に辺が揃います（吸着）。</li>
+        <li>部屋をクリックすると、名前・広さのメモの編集、複製、削除ができます。</li>
+        <li>左側の「🪑 家具・設備を追加」から開き戸・引き戸・両開き戸・親子扉・折れ戸・窓・手すり・段差・スロープ・階段・ベッドなどをクリックして配置します。一覧に無いもの（押入・仏壇など）は「✏️ 自由入力」から形と名前を決めて追加できます。</li>
+        <li>ドアや窓が無く、壁がただ途切れているだけの出入口（勝手口など）は「開口部(勝手口・扉なし)」を使うと、記号を何も描かずに壁の枠線だけ途切れさせられます。</li>
+        <li>ドア・窓を部屋の壁の近くまでドラッグすると、壁に自動的に開口部ができて向きも合わせてフィットします（壁から離すと解除されます）。</li>
+        <li>家具・階段は四隅のハンドルで大きさを変えられます。壁にフィットしていない家具は上に出る丸いハンドルをドラッグすると自由な角度に回せます（90度ボタンも使えます）。</li>
+        <li>家具をクリックすると、回転・注釈（高さ等）の編集・複製・削除ができます。部屋を動かすと、中に置いた家具も一緒に付いてきます。</li>
+        <li>「➕ テキストを追加」で自由なメモを図の上に置けます。</li>
+        <li>画面のドラッグでパン、ホイールでズームできます。「🔍 全体表示」で全体が見える位置に戻ります。</li>
+        <li>操作は自動的に端末へ保存されます。「📁 保存データ一覧」から過去のケースを開いたり、メモを付けたりできます。</li>
+        <li>「🖼 画像出力」「📄 PDF出力」で完成した見取り図をダウンロードできます。出力画面では「透明背景」「部屋の床の色も透明にする」（白基調の書式に貼り付ける時など）も選べます。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- PDF出力専用の印刷エリア（画面には表示せず、印刷/PDF保存時だけ使う） -->
+  <div id="print-area"></div>
+
+  <script>
+// 住環境見取り図アプリのデータモデル。
+// ジェノグラムアプリ(genogram_web)とは別データ構造だが、保存の考え方（1ケース=1書類、
+// 端末への複数ケース自動保存）は同じ設計を踏襲する。
+
+(function (Madori) {
+  // 家具・設備アイコンの種類。値はcanvas.jsのdrawFixtureIcon()が参照するキー。
+  const FixtureType = {
+    DOOR: "door",
+    SLIDING_DOOR: "sliding_door",
+    DOUBLE_DOOR: "double_door",
+    PARENT_CHILD_DOOR: "parent_child_door",
+    FOLDING_DOOR: "folding_door",
+    OPENING: "opening",
+    WINDOW: "window",
+    TOILET: "toilet",
+    BATHTUB: "bathtub",
+    SINK: "sink",
+    KITCHEN: "kitchen",
+    BED: "bed",
+    TABLE: "table",
+    WHEELCHAIR: "wheelchair",
+    PORTABLE_TOILET: "portable_toilet",
+    HANDRAIL_V: "handrail_v",
+    HANDRAIL_H: "handrail_h",
+    HANDRAIL_L: "handrail_l",
+    STEP: "step",
+    RAMP: "ramp",
+    STAIRS: "stairs",
+    NORTH: "north",
+    ARROW: "arrow",
+    CUSTOM: "custom",
+  };
+
+  // 「自由入力」種類で選べる図形の一覧
+  const CustomShape = {
+    RECT: "rect",
+    CIRCLE: "circle",
+    TRIANGLE: "triangle",
+    DIAMOND: "diamond",
+  };
+
+  // 壁に自動フィットする（開口部として扱う）種類。ドア・窓は部屋の辺に近づけると
+  // 壁に隙間ができ、壁の向きに合わせて自動で回転する。それ以外の家具は自由配置のまま。
+  const WALL_ATTACHABLE_TYPES = [
+    FixtureType.DOOR,
+    FixtureType.SLIDING_DOOR,
+    FixtureType.DOUBLE_DOOR,
+    FixtureType.PARENT_CHILD_DOOR,
+    FixtureType.FOLDING_DOOR,
+    FixtureType.OPENING,
+    FixtureType.WINDOW,
+  ];
+
+  // 壁の辺ごとの回転角度。アイコンは「上側の壁に取り付き、部屋の内側(+y方向)へ
+  // 開く」向きを基準(0度)に描く前提で統一している（canvas.jsのdrawFixtureIcon参照）。
+  const WALL_SIDE_ROTATION = { top: 0, right: 90, bottom: 180, left: 270 };
+
+  // パレットに並べる順番・日本語ラベル・既定サイズ(幅,高さ／ワールド座標)。
+  // 全種類とも角のハンドルでリサイズでき、初期値はあくまで置いた時の目安。
+  const FIXTURE_CATALOG = [
+    { type: FixtureType.DOOR, label: "開き戸", w: 50, h: 50 },
+    { type: FixtureType.SLIDING_DOOR, label: "引き戸", w: 60, h: 16 },
+    { type: FixtureType.DOUBLE_DOOR, label: "両開き戸", w: 80, h: 40 },
+    { type: FixtureType.PARENT_CHILD_DOOR, label: "親子扉", w: 90, h: 50 },
+    { type: FixtureType.FOLDING_DOOR, label: "折れ戸", w: 50, h: 34 },
+    { type: FixtureType.OPENING, label: "開口部(勝手口・扉なし)", w: 50, h: 16 },
+    { type: FixtureType.WINDOW, label: "窓", w: 50, h: 12 },
+    { type: FixtureType.TOILET, label: "便器", w: 40, h: 50 },
+    { type: FixtureType.BATHTUB, label: "浴槽", w: 70, h: 40 },
+    { type: FixtureType.SINK, label: "洗面台", w: 50, h: 34 },
+    { type: FixtureType.KITCHEN, label: "キッチン(シンク)", w: 80, h: 40 },
+    { type: FixtureType.BED, label: "ベッド", w: 60, h: 100 },
+    { type: FixtureType.TABLE, label: "テーブル・椅子", w: 70, h: 70 },
+    { type: FixtureType.WHEELCHAIR, label: "車椅子", w: 44, h: 50 },
+    { type: FixtureType.PORTABLE_TOILET, label: "ポータブルトイレ", w: 40, h: 40 },
+    { type: FixtureType.HANDRAIL_V, label: "縦手すり", w: 12, h: 60 },
+    { type: FixtureType.HANDRAIL_H, label: "横手すり", w: 60, h: 12 },
+    { type: FixtureType.HANDRAIL_L, label: "L型手すり", w: 60, h: 60 },
+    { type: FixtureType.STEP, label: "段差解消", w: 60, h: 20 },
+    { type: FixtureType.RAMP, label: "スロープ", w: 50, h: 70 },
+    { type: FixtureType.STAIRS, label: "階段", w: 80, h: 140 },
+    { type: FixtureType.NORTH, label: "方位記号(北)", w: 36, h: 36 },
+    { type: FixtureType.ARROW, label: "動線矢印", w: 90, h: 16 },
+    { type: FixtureType.CUSTOM, label: "✏️ 自由入力", w: 60, h: 60 },
+  ];
+
+  function findCatalogEntry(type) {
+    return FIXTURE_CATALOG.find((e) => e.type === type) || FIXTURE_CATALOG[0];
+  }
+
+  function isWallAttachable(type) {
+    return WALL_ATTACHABLE_TYPES.indexOf(type) !== -1;
+  }
+
+  let idCounter = 0;
+  function makeId(prefix) {
+    idCounter += 1;
+    return `${prefix}_${Date.now().toString(36)}_${idCounter}`;
+  }
+
+  function createRoom(overrides) {
+    return Object.assign(
+      {
+        id: makeId("room"),
+        x: 0,
+        y: 0,
+        width: 140,
+        height: 100,
+        label: "部屋",
+        tatami: "", // 任意の畳数など（文字列のまま自由記入、例："6帖"）
+        manuallyMoved: true, // 部屋は常に手動配置なので他アプリのような自動整列は行わない
+      },
+      overrides || {}
+    );
+  }
+
+  function createFixture(type, overrides) {
+    const entry = findCatalogEntry(type);
+    return Object.assign(
+      {
+        id: makeId("fixture"),
+        type,
+        x: 0,
+        y: 0,
+        width: entry.w,
+        height: entry.h,
+        rotation: 0, // 0/90/180/270度（壁付け中は壁の向きに自動設定される）
+        flipped: false, // 左右反転。ドアの丁番側など、回転だけでは表現できない向きに対応する
+        label: "", // 任意の注釈（例："手すり 高さ75cm"）。CUSTOM種類ではこれが表示名そのものになる
+        wall: null, // 壁に自動フィットした場合 {roomId, side, offset}（offsetは壁沿いの中心位置）
+        customShape: type === FixtureType.CUSTOM ? CustomShape.RECT : null, // CUSTOM種類のみ使う図形の種類
+      },
+      overrides || {}
+    );
+  }
+
+  function duplicateRoom(room) {
+    return createRoom(
+      Object.assign({}, room, {
+        id: makeId("room"),
+        x: room.x + 24,
+        y: room.y + 24,
+      })
+    );
+  }
+
+  function duplicateFixture(fixture) {
+    return createFixture(
+      fixture.type,
+      Object.assign({}, fixture, {
+        id: makeId("fixture"),
+        x: fixture.x + 24,
+        y: fixture.y + 24,
+        // 壁に付いていた場合、複製後も同じ壁のwallの上に重ねて置いてしまうと開口部が
+        // 重複して分かりにくくなるため、複製直後は自由配置に戻す（必要ならドラッグで
+        // 別の壁に付け直してもらう）
+        wall: null,
+      })
+    );
+  }
+
+  function createAnnotation(overrides) {
+    return Object.assign(
+      {
+        id: makeId("text"),
+        x: 0,
+        y: 0,
+        text: "メモ",
+      },
+      overrides || {}
+    );
+  }
+
+  function createDocument(overrides) {
+    return Object.assign(
+      {
+        caseId: null,
+        caseLabel: "", // 例："主任ケアマネ更新研修用"
+        title: "", // 対象者名・案件名など
+        creatorName: "",
+        note: "",
+        rooms: [],
+        fixtures: [],
+        annotations: [],
+        updatedAt: Date.now(),
+      },
+      overrides || {}
+    );
+  }
+
+  Madori.FixtureType = FixtureType;
+  Madori.CustomShape = CustomShape;
+  Madori.WALL_ATTACHABLE_TYPES = WALL_ATTACHABLE_TYPES;
+  Madori.WALL_SIDE_ROTATION = WALL_SIDE_ROTATION;
+  Madori.FIXTURE_CATALOG = FIXTURE_CATALOG;
+  Madori.findCatalogEntry = findCatalogEntry;
+  Madori.isWallAttachable = isWallAttachable;
+  Madori.makeId = makeId;
+  Madori.createRoom = createRoom;
+  Madori.duplicateRoom = duplicateRoom;
+  Madori.createFixture = createFixture;
+  Madori.duplicateFixture = duplicateFixture;
+  Madori.createAnnotation = createAnnotation;
+  Madori.createDocument = createDocument;
+})((window.Madori = window.Madori || {}));
+
+</script>
+  <script>
+// SVGキャンバス：部屋（矩形・リサイズ可・壁に開口部を持てる）、家具・設備アイコン、
+// テキスト注釈の描画とドラッグ操作。
+// パン・ズーム・ワールド座標変換の基本部分はgenogram_web/canvas.jsと同じ設計をそのまま踏襲している
+// （汎用ロジックのため、ジェノグラム固有の要素は一切含まない）。
+
+(function (Madori) {
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const GRID = 20; // 背景グリッドの間隔（ワールド座標）。厳密な採寸ではなく「揃える」ための目安
+  const SNAP_THRESHOLD = 10; // これ未満の差なら吸着する
+  const WALL_SNAP_THRESHOLD = 24; // ドア・窓が壁に自動フィットする距離
+  const HANDLE_SIZE = 12;
+  const MIN_HIT = 28; // 家具アイコンの最小当たり判定サイズ（細い線だけの図形でもクリック・ドラッグしやすくする）
+  const WALL_SIDES = ["top", "right", "bottom", "left"];
+
+  let svg = null;
+  let viewportGroup = null;
+  let gridLayer = null;
+  let layerRooms = null;
+  let layerFixtures = null;
+  let layerRoomLabels = null;
+  let layerAnnotations = null;
+
+  const viewTransform = { x: 0, y: 0, scale: 1 };
+  const MIN_SCALE = 0.2;
+  const MAX_SCALE = 3;
+
+  let currentDocument = null;
+  const roomGroups = {};
+  const fixtureGroups = {};
+  const annotationGroups = {};
+  const roomWallRedrawers = {}; // roomId -> 部屋の壁(開口部込み)を再描画する関数
+  const roomLabelRepositioners = {}; // roomId -> 部屋名ラベル(最前面レイヤー)の位置を再計算する関数
+
+  // リサイズ・回転ハンドルは「直近でクリック/ドラッグしたパーツ」だけに表示する。
+  // 常時全部表示だと、パーツを密集させた時にハンドル同士が重なって掴みにくくなるため。
+  // ownerKeyは "room:<id>" または "fixture:<id>" の形。
+  let activeHandleOwner = null;
+  const handleVisibilityRefreshers = {}; // ownerKey -> 自分のハンドルのdisplayを更新する関数
+
+  function setActiveHandleOwner(ownerKey) {
+    if (activeHandleOwner === ownerKey) return;
+    const previous = activeHandleOwner;
+    activeHandleOwner = ownerKey;
+    if (previous && handleVisibilityRefreshers[previous]) handleVisibilityRefreshers[previous]();
+    if (ownerKey && handleVisibilityRefreshers[ownerKey]) handleVisibilityRefreshers[ownerKey]();
+  }
+
+  let onRoomClick = null;
+  let onFixtureClick = null;
+  let onAnnotationClick = null;
+  let onDragEnd = null;
+  let onZoomChange = null;
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    if (attrs) {
+      for (const key in attrs) el.setAttribute(key, attrs[key]);
+    }
+    return el;
+  }
+
+  function init(svgElement) {
+    svg = svgElement;
+    setupPanZoom();
+  }
+
+  // ===== パン・ズーム（genogram_webと同じ設計） =====
+  function setupPanZoom() {
+    svg.addEventListener("pointerdown", (evt) => {
+      if (evt.target !== svg) return;
+      // 何もない場所を押したら、直前まで表示していたハンドルを隠す（選択解除）
+      setActiveHandleOwner(null);
+      const startClientX = evt.clientX;
+      const startClientY = evt.clientY;
+      const startTransform = { x: viewTransform.x, y: viewTransform.y };
+
+      function onMove(moveEvt) {
+        viewTransform.x = startTransform.x + (moveEvt.clientX - startClientX);
+        viewTransform.y = startTransform.y + (moveEvt.clientY - startClientY);
+        applyViewTransform();
+      }
+      function onUp() {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+      }
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    });
+
+    svg.addEventListener(
+      "wheel",
+      (evt) => {
+        evt.preventDefault();
+        const rect = svg.getBoundingClientRect();
+        const screenX = evt.clientX - rect.left;
+        const screenY = evt.clientY - rect.top;
+        const worldBefore = screenToWorld(evt.clientX, evt.clientY);
+        const factor = evt.deltaY < 0 ? 1.1 : 1 / 1.1;
+        viewTransform.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewTransform.scale * factor));
+        viewTransform.x = screenX - viewTransform.scale * worldBefore.x;
+        viewTransform.y = screenY - viewTransform.scale * worldBefore.y;
+        applyViewTransform();
+      },
+      { passive: false }
+    );
+  }
+
+  function setZoomChangeHandler(handler) {
+    onZoomChange = handler;
+    if (onZoomChange) onZoomChange(Math.round(viewTransform.scale * 100));
+  }
+
+  function applyViewTransform() {
+    if (!viewportGroup) return;
+    viewportGroup.setAttribute(
+      "transform",
+      `translate(${viewTransform.x}, ${viewTransform.y}) scale(${viewTransform.scale})`
+    );
+    if (onZoomChange) onZoomChange(Math.round(viewTransform.scale * 100));
+  }
+
+  function zoomBy(factor) {
+    const rect = svg.getBoundingClientRect();
+    const screenX = rect.width / 2;
+    const screenY = rect.height / 2;
+    const worldBefore = screenToWorld(rect.left + screenX, rect.top + screenY);
+    viewTransform.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewTransform.scale * factor));
+    viewTransform.x = screenX - viewTransform.scale * worldBefore.x;
+    viewTransform.y = screenY - viewTransform.scale * worldBefore.y;
+    applyViewTransform();
+  }
+
+  function screenToWorld(clientX, clientY) {
+    const rect = svg.getBoundingClientRect();
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
+    return {
+      x: (screenX - viewTransform.x) / viewTransform.scale,
+      y: (screenY - viewTransform.y) / viewTransform.scale,
+    };
+  }
+
+  function computeContentBounds(doc) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let any = false;
+    doc.rooms.forEach((r) => {
+      any = true;
+      minX = Math.min(minX, r.x); maxX = Math.max(maxX, r.x + r.width);
+      minY = Math.min(minY, r.y); maxY = Math.max(maxY, r.y + r.height);
+    });
+    doc.fixtures.forEach((f) => {
+      // 壁付けの家具は中心ではなく壁沿いに描かれる(0〜height方向)ため、
+      // 厳密な矩形計算はせず余裕を持たせた範囲で近似する（fitToViewが多少広く取る程度は実害が無い）。
+      any = true;
+      minX = Math.min(minX, f.x - f.width); maxX = Math.max(maxX, f.x + f.width);
+      minY = Math.min(minY, f.y - f.height); maxY = Math.max(maxY, f.y + f.height);
+    });
+    doc.annotations.forEach((a) => {
+      any = true;
+      minX = Math.min(minX, a.x - 40); maxX = Math.max(maxX, a.x + 40);
+      minY = Math.min(minY, a.y - 12); maxY = Math.max(maxY, a.y + 12);
+    });
+    if (!any) return null;
+    return { minX, minY, maxX, maxY };
+  }
+
+  function fitToView(doc) {
+    const bounds = computeContentBounds(doc);
+    if (!bounds) {
+      viewTransform.x = 0;
+      viewTransform.y = 0;
+      viewTransform.scale = 1;
+      applyViewTransform();
+      return;
+    }
+    const rect = svg.getBoundingClientRect();
+    const margin = 60;
+    const contentWidth = Math.max(1, bounds.maxX - bounds.minX);
+    const contentHeight = Math.max(1, bounds.maxY - bounds.minY);
+    const FIT_MAX_SCALE = 1.8;
+    const scale = Math.min(
+      FIT_MAX_SCALE,
+      Math.max(MIN_SCALE, Math.min((rect.width - margin * 2) / contentWidth, (rect.height - margin * 2) / contentHeight))
+    );
+    const contentCenterX = (bounds.minX + bounds.maxX) / 2;
+    const contentCenterY = (bounds.minY + bounds.maxY) / 2;
+    viewTransform.scale = scale;
+    viewTransform.x = rect.width / 2 - scale * contentCenterX;
+    viewTransform.y = rect.height / 2 - scale * contentCenterY;
+    applyViewTransform();
+  }
+
+  function isWorldPointVisible(x, y, margin) {
+    const m = margin || 0;
+    const rect = svg.getBoundingClientRect();
+    const topLeft = screenToWorld(rect.left, rect.top);
+    const bottomRight = screenToWorld(rect.right, rect.bottom);
+    return x >= topLeft.x - m && x <= bottomRight.x + m && y >= topLeft.y - m && y <= bottomRight.y + m;
+  }
+
+  // ===== ハンドラ登録 =====
+  function setRoomClickHandler(h) { onRoomClick = h; }
+  function setFixtureClickHandler(h) { onFixtureClick = h; }
+  function setAnnotationClickHandler(h) { onAnnotationClick = h; }
+  function setDragEndHandler(h) { onDragEnd = h; }
+
+  // ===== スナップ（吸着） =====
+  // 部屋を動かす時：グリッド、または他の部屋の辺（左右/上下どちらの向きの隣接も）に吸着する。
+  function computeSnap1D(newPos, size, others, threshold) {
+    const candidates = [Math.round(newPos / GRID) * GRID];
+    others.forEach((o) => {
+      candidates.push(o.pos, o.pos + o.size, o.pos - size, o.pos + o.size - size);
+    });
+    let best = newPos;
+    let bestDist = threshold;
+    candidates.forEach((c) => {
+      const d = Math.abs(c - newPos);
+      if (d < bestDist) {
+        bestDist = d;
+        best = c;
+      }
+    });
+    return best;
+  }
+
+  function snapRoomPosition(room, newX, newY) {
+    const others = currentDocument.rooms
+      .filter((r) => r.id !== room.id)
+      .map((r) => ({ pos: r.x, size: r.width }));
+    const othersY = currentDocument.rooms
+      .filter((r) => r.id !== room.id)
+      .map((r) => ({ pos: r.y, size: r.height }));
+    return {
+      x: computeSnap1D(newX, room.width, others, SNAP_THRESHOLD),
+      y: computeSnap1D(newY, room.height, othersY, SNAP_THRESHOLD),
+    };
+  }
+
+  // リサイズ時、動いている辺だけを他の部屋の辺・グリッドに吸着させる
+  function snapPoint(value, points, threshold) {
+    let best = value;
+    let bestDist = threshold;
+    points.forEach((p) => {
+      const d = Math.abs(p - value);
+      if (d < bestDist) {
+        bestDist = d;
+        best = p;
+      }
+    });
+    return best;
+  }
+
+  // 部屋のリサイズ用：X方向・Y方向それぞれ独立に、動いている辺の位置を
+  // グリッド・他の部屋の辺へスナップする（四隅どの角をドラッグしても使える汎用版）。
+  function snapRoomEdgeX(room, rawX) {
+    const points = [Math.round(rawX / GRID) * GRID];
+    currentDocument.rooms.forEach((r) => {
+      if (r.id === room.id) return;
+      points.push(r.x, r.x + r.width);
+    });
+    return snapPoint(rawX, points, SNAP_THRESHOLD);
+  }
+
+  function snapRoomEdgeY(room, rawY) {
+    const points = [Math.round(rawY / GRID) * GRID];
+    currentDocument.rooms.forEach((r) => {
+      if (r.id === room.id) return;
+      points.push(r.y, r.y + r.height);
+    });
+    return snapPoint(rawY, points, SNAP_THRESHOLD);
+  }
+
+  function snapToGridOnly(value) {
+    return Math.round(value / GRID) * GRID;
+  }
+
+  // 壁から離れた自由配置の家具用：グリッド線のごく近く(GRID=20に対して5だけ)にいる時だけ
+  // 吸着し、そうでなければドラッグした位置をそのまま使う（常にグリッドへ丸めてしまうと、
+  // ソファなどを壁から少し離した意図的な位置に置きたい時に、思った場所へ置けなくなって
+  // しまうため）。SNAP_THRESHOLD(10)はGRID(20)のちょうど半分＝どんな位置でも必ずどちらかの
+  // グリッド線から10以内になってしまい実質的に常時スナップと同じになるため、
+  // ここでは意図的にもっと小さい専用のしきい値を使う。
+  const FREE_SNAP_THRESHOLD = 5;
+  function snapToGridSoft(value) {
+    const snapped = snapToGridOnly(value);
+    return Math.abs(snapped - value) <= FREE_SNAP_THRESHOLD ? snapped : value;
+  }
+
+  // 壁付けでない家具（ベッド・便器など）も、部屋の壁際までドラッグすると辺がピタッと
+  // 吸着するようにする（壁に開口部を作るドア・窓とは違い、単に位置を合わせるだけ）。
+  // 90度単位の回転のみ対応（斜めの角度では軸に沿った吸着自体が意味を持たないため）。
+  // ドア・窓のWALL_SNAP_THRESHOLD(24)をそのまま使うと、壁からあえて少し隙間を空けて
+  // 家具を置きたい時にも吸い寄せられてしまい配置の自由度が下がるため、家具の壁吸着だけは
+  // もっと狭い専用のしきい値にする（壁にぴったり付けたい時だけ効くように）。
+  const FURNITURE_WALL_SNAP_THRESHOLD = 10;
+  function computeFurnitureWallSnap(width, height, rotation, rawX, rawY) {
+    const rot = ((Math.round(rotation) % 360) + 360) % 360;
+    if (rot !== 0 && rot !== 90 && rot !== 180 && rot !== 270) return null;
+    const swapped = rot === 90 || rot === 270;
+    const halfW = (swapped ? height : width) / 2;
+    const halfH = (swapped ? width : height) / 2;
+    let bestX = null;
+    let bestY = null;
+    currentDocument.rooms.forEach((room) => {
+      const overlapsX =
+        rawX + halfW > room.x - FURNITURE_WALL_SNAP_THRESHOLD && rawX - halfW < room.x + room.width + FURNITURE_WALL_SNAP_THRESHOLD;
+      const overlapsY =
+        rawY + halfH > room.y - FURNITURE_WALL_SNAP_THRESHOLD && rawY - halfH < room.y + room.height + FURNITURE_WALL_SNAP_THRESHOLD;
+      if (overlapsX) {
+        const distTop = Math.abs(rawY - halfH - room.y);
+        if (distTop < FURNITURE_WALL_SNAP_THRESHOLD && (!bestY || distTop < bestY.dist)) {
+          bestY = { dist: distTop, y: room.y + halfH };
+        }
+        const distBottom = Math.abs(rawY + halfH - (room.y + room.height));
+        if (distBottom < FURNITURE_WALL_SNAP_THRESHOLD && (!bestY || distBottom < bestY.dist)) {
+          bestY = { dist: distBottom, y: room.y + room.height - halfH };
+        }
+      }
+      if (overlapsY) {
+        const distLeft = Math.abs(rawX - halfW - room.x);
+        if (distLeft < FURNITURE_WALL_SNAP_THRESHOLD && (!bestX || distLeft < bestX.dist)) {
+          bestX = { dist: distLeft, x: room.x + halfW };
+        }
+        const distRight = Math.abs(rawX + halfW - (room.x + room.width));
+        if (distRight < FURNITURE_WALL_SNAP_THRESHOLD && (!bestX || distRight < bestX.dist)) {
+          bestX = { dist: distRight, x: room.x + room.width - halfW };
+        }
+      }
+    });
+    if (!bestX && !bestY) return null;
+    return { x: bestX ? bestX.x : null, y: bestY ? bestY.y : null };
+  }
+
+  // ===== 壁ジオメトリ（部屋の辺・ドア/窓の開口部・自動フィット） =====
+  // 各辺のオフセットは必ず決まった向き（上/下=左→右、左/右=上→下）からの距離とする。
+  // fixture.wall.offsetはこの向きに沿った「開口部の中心位置」。
+  function wallEndpointsLocal(room, side) {
+    switch (side) {
+      case "top": return { p1: { x: 0, y: 0 }, p2: { x: room.width, y: 0 }, length: room.width };
+      case "bottom": return { p1: { x: 0, y: room.height }, p2: { x: room.width, y: room.height }, length: room.width };
+      case "left": return { p1: { x: 0, y: 0 }, p2: { x: 0, y: room.height }, length: room.height };
+      case "right": return { p1: { x: room.width, y: 0 }, p2: { x: room.width, y: room.height }, length: room.height };
+      default: return { p1: { x: 0, y: 0 }, p2: { x: 0, y: 0 }, length: 0 };
+    }
+  }
+
+  function wallLength(room, side) {
+    return side === "top" || side === "bottom" ? room.width : room.height;
+  }
+
+  function wallPointWorld(room, side, offset) {
+    const { p1, p2, length } = wallEndpointsLocal(room, side);
+    const t = length === 0 ? 0 : offset / length;
+    return {
+      x: room.x + p1.x + (p2.x - p1.x) * t,
+      y: room.y + p1.y + (p2.y - p1.y) * t,
+    };
+  }
+
+  // 部屋に取り付いている全てのドア・窓の開口部一覧を辺ごとにまとめる
+  function collectWallOpenings(room) {
+    const openings = { top: [], right: [], bottom: [], left: [] };
+    currentDocument.fixtures.forEach((f) => {
+      if (f.wall && f.wall.roomId === room.id) {
+        openings[f.wall.side].push({ start: f.wall.offset - f.width / 2, end: f.wall.offset + f.width / 2, fixtureId: f.id });
+      }
+    });
+    return openings;
+  }
+
+  // 同じ壁の同じ辺で、2つ以上の開口部が重なっているものを検出する
+  // （例：ドアと窓を同じ位置に置いてしまった場合の警告用）。
+  function detectWallConflicts(openingsBySide) {
+    const conflictIds = new Set();
+    WALL_SIDES.forEach((side) => {
+      const sorted = openingsBySide[side].slice().sort((a, b) => a.start - b.start);
+      let runningMaxEnd = -Infinity;
+      let runningMaxId = null;
+      sorted.forEach((o) => {
+        if (o.start < runningMaxEnd) {
+          conflictIds.add(o.fixtureId);
+          conflictIds.add(runningMaxId);
+        }
+        if (o.end > runningMaxEnd) {
+          runningMaxEnd = o.end;
+          runningMaxId = o.fixtureId;
+        }
+      });
+    });
+    return conflictIds;
+  }
+
+  // 壁の開口部の重なり状態を、対象の部屋に付いている家具の見た目(赤い警告表示)に反映する
+  function refreshWallConflictHighlights(room) {
+    const conflicts = detectWallConflicts(collectWallOpenings(room));
+    currentDocument.fixtures.forEach((f) => {
+      if (f.wall && f.wall.roomId === room.id) {
+        const el = fixtureGroups[f.id];
+        if (el) el.classList.toggle("fixture-conflict", conflicts.has(f.id));
+      }
+    });
+  }
+
+  // 開口部を除いた「実線を引くべき区間」のリスト（0〜lengthの範囲のペア）を返す
+  function computeWallSegments(length, openings) {
+    const sorted = openings.slice().sort((a, b) => a.start - b.start);
+    let cursor = 0;
+    const segments = [];
+    sorted.forEach((o) => {
+      const s = Math.max(0, Math.min(length, o.start));
+      const e = Math.max(0, Math.min(length, o.end));
+      if (s > cursor) segments.push([cursor, s]);
+      cursor = Math.max(cursor, e);
+    });
+    if (cursor < length) segments.push([cursor, length]);
+    return segments;
+  }
+
+  // 点(px,py)に最も近い部屋の壁を探し、壁沿いのオフセット(開口部の中心位置)を返す。
+  // ドア・窓をドラッグしている時の「壁への自動フィット」に使う。閾値内に壁が無ければnull。
+  function computeWallAttachment(fixtureWidth, px, py, threshold) {
+    let best = null;
+    currentDocument.rooms.forEach((room) => {
+      WALL_SIDES.forEach((side) => {
+        const { p1, p2, length } = wallEndpointsLocal(room, side);
+        const worldP1 = { x: room.x + p1.x, y: room.y + p1.y };
+        const worldP2 = { x: room.x + p2.x, y: room.y + p2.y };
+        const isHorizontal = worldP1.y === worldP2.y;
+        const perpDist = isHorizontal ? Math.abs(py - worldP1.y) : Math.abs(px - worldP1.x);
+        if (perpDist > threshold) return;
+        const along = isHorizontal ? px - worldP1.x : py - worldP1.y;
+        const margin = Math.min(fixtureWidth / 2, length / 2);
+        if (along < -threshold || along > length + threshold) return;
+        const offset = Math.min(Math.max(along, margin), Math.max(length - margin, margin));
+        if (!best || perpDist < best.perpDist) {
+          best = { roomId: room.id, side, offset, perpDist };
+        }
+      });
+    });
+    return best;
+  }
+
+  // 部屋の移動・リサイズ後、その部屋の壁に取り付いているドア・窓の位置を追従させる
+  function repositionAttachedFixtures(room) {
+    currentDocument.fixtures.forEach((f) => {
+      if (!f.wall || f.wall.roomId !== room.id) return;
+      clampFixtureToWall(f, room);
+      const el = fixtureGroups[f.id];
+      if (el) el.setAttribute("transform", `translate(${f.x}, ${f.y}) rotate(${f.rotation})`);
+    });
+  }
+
+  // 部屋の矩形内に収まっている（壁付けではない）家具のIDを集める。
+  // 部屋のドラッグ開始時点で一度だけ計算し、その部屋が動いている間はこのIDの集合を
+  // 固定のまま使う（ドラッグ中に境界をまたいで出入りするような挙動を避けるため）。
+  function computeContainedFixtureIds(room) {
+    return currentDocument.fixtures
+      .filter((f) => !f.wall)
+      .filter((f) => f.x >= room.x && f.x <= room.x + room.width && f.y >= room.y && f.y <= room.y + room.height)
+      .map((f) => f.id);
+  }
+
+  function shiftFixturesByIds(ids, dx, dy) {
+    if (dx === 0 && dy === 0) return;
+    ids.forEach((id) => {
+      const f = currentDocument.fixtures.find((ff) => ff.id === id);
+      if (!f) return;
+      f.x += dx;
+      f.y += dy;
+      const el = fixtureGroups[f.id];
+      if (el) el.setAttribute("transform", `translate(${f.x}, ${f.y}) rotate(${f.rotation})`);
+    });
+  }
+
+  // リサイズ中は「固定した開始地点からの累計移動量」で計算する（他のリサイズ処理と同じ
+  // 理由：閾値未満の移動が繰り返し無効化されるのを防ぐため）ため、家具側も直前フレームからの
+  // 差分ではなく、ドラッグ開始時点の元位置を基準に絶対座標で計算し直す必要がある。
+  function computeContainedFixtureOrigins(room) {
+    const origins = {};
+    computeContainedFixtureIds(room).forEach((id) => {
+      const f = currentDocument.fixtures.find((ff) => ff.id === id);
+      if (f) origins[id] = { x: f.x, y: f.y };
+    });
+    return origins;
+  }
+
+  function applyFixtureOriginShift(origins, dx, dy) {
+    Object.keys(origins).forEach((id) => {
+      const f = currentDocument.fixtures.find((ff) => ff.id === id);
+      if (!f) return;
+      f.x = origins[id].x + dx;
+      f.y = origins[id].y + dy;
+      const el = fixtureGroups[f.id];
+      if (el) el.setAttribute("transform", `translate(${f.x}, ${f.y}) rotate(${f.rotation})`);
+    });
+  }
+
+  function redrawRoomWalls(roomId) {
+    const redraw = roomWallRedrawers[roomId];
+    if (redraw) redraw();
+    const room = currentDocument.rooms.find((r) => r.id === roomId);
+    if (room) refreshWallConflictHighlights(room);
+  }
+
+  // ===== 背景グリッド =====
+  function renderGrid() {
+    gridLayer.innerHTML = "";
+    const pattern = svgEl("pattern", {
+      id: "madori-grid-pattern",
+      width: GRID,
+      height: GRID,
+      patternUnits: "userSpaceOnUse",
+    });
+    pattern.appendChild(
+      svgEl("circle", { cx: 1, cy: 1, r: 1, fill: "#d3e3f0" })
+    );
+    let defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = svgEl("defs", {});
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    defs.innerHTML = "";
+    defs.appendChild(pattern);
+    // グリッドは見た目だけの目安線で操作対象ではないため、pointer-events:noneにして
+    // クリックがすり抜けてsvg自体（パン開始・選択解除の判定基準）に届くようにする。
+    // これが無いと、キャンバスのほぼ全域を覆うこの矩形が背景クリックを横取りしてしまい、
+    // 「何もない場所」判定(evt.target === svg)が成立しなくなる。
+    gridLayer.appendChild(
+      svgEl("rect", { x: -4000, y: -4000, width: 8000, height: 8000, fill: "url(#madori-grid-pattern)", style: "pointer-events: none;" })
+    );
+  }
+
+  // ===== 汎用ドラッグ =====
+  // snapFn(rawX,rawY)は{x,y}に加えて任意の追加フィールド（rotation、wallなど）を返してよい。
+  // setPosはその結果オブジェクトをそのまま受け取り、対象ごとに必要なフィールドだけ使う。
+  function attachDrag(group, getPos, setPos, snapFn, onClick) {
+    let dragging = false;
+    let startX = 0, startY = 0, originX = 0, originY = 0, moved = false;
+
+    group.addEventListener("pointerdown", (evt) => {
+      dragging = true;
+      moved = false;
+      group.setPointerCapture(evt.pointerId);
+      evt.stopPropagation();
+      const world = screenToWorld(evt.clientX, evt.clientY);
+      startX = world.x;
+      startY = world.y;
+      const pos = getPos();
+      originX = pos.x;
+      originY = pos.y;
+      evt.preventDefault();
+    });
+
+    group.addEventListener("pointermove", (evt) => {
+      if (!dragging) return;
+      const world = screenToWorld(evt.clientX, evt.clientY);
+      const rawX = originX + (world.x - startX);
+      const rawY = originY + (world.y - startY);
+      const snapped = snapFn(rawX, rawY);
+      // 「動いた」かどうかは生のマウス移動量ではなく、スナップ後の座標が実際に
+      // 開始位置と変わったかで判定する。生の移動量が閾値未満でも、グリッド境界を
+      // またいでスナップ後の値が変わることがあり、その場合は実データが変わっている
+      // のでmoved=trueにしないと、見た目は動いたのに保存されない（Undoにも乗らない）
+      // というデータの不整合が起きる。
+      if (snapped.x !== originX || snapped.y !== originY) moved = true;
+      setPos(snapped);
+    });
+
+    group.addEventListener("pointerup", (evt) => {
+      dragging = false;
+      group.releasePointerCapture(evt.pointerId);
+      if (!moved && onClick) onClick(evt.clientX, evt.clientY);
+      if (moved && onDragEnd) onDragEnd();
+    });
+  }
+
+  // ===== 部屋 =====
+  function addRoomNode(room) {
+    const group = svgEl("g", { class: "room-node" });
+    group.style.cursor = "grab";
+
+    const fillRect = svgEl("rect", {
+      x: 0, y: 0, width: room.width, height: room.height,
+      class: "room-fill", rx: 4,
+    });
+    group.appendChild(fillRect);
+
+    const wallsGroup = svgEl("g", { class: "room-walls" });
+    group.appendChild(wallsGroup);
+
+    function redrawWalls() {
+      wallsGroup.innerHTML = "";
+      const openingsBySide = collectWallOpenings(room);
+      WALL_SIDES.forEach((side) => {
+        const { p1, p2, length } = wallEndpointsLocal(room, side);
+        computeWallSegments(length, openingsBySide[side]).forEach(([s, e]) => {
+          const ts = length === 0 ? 0 : s / length;
+          const te = length === 0 ? 0 : e / length;
+          wallsGroup.appendChild(
+            svgEl("line", {
+              x1: p1.x + (p2.x - p1.x) * ts, y1: p1.y + (p2.y - p1.y) * ts,
+              x2: p1.x + (p2.x - p1.x) * te, y2: p1.y + (p2.y - p1.y) * te,
+              class: "room-wall-line",
+            })
+          );
+        });
+      });
+    }
+    redrawWalls();
+    roomWallRedrawers[room.id] = redrawWalls;
+
+    // 四隅すべてにリサイズハンドルを置く（右下だけだと不便という指摘を受けて全角対応化）。
+    // ドラッグした角の「対角」が世界座標上で動かないように計算する（handleDefsのdx/dy参照）。
+    const CORNER_DEFS = [
+      { key: "tl", cursor: "nwse-resize", dx: 0, dy: 0 },
+      { key: "tr", cursor: "nesw-resize", dx: 1, dy: 0 },
+      { key: "bl", cursor: "nesw-resize", dx: 0, dy: 1 },
+      { key: "br", cursor: "nwse-resize", dx: 1, dy: 1 },
+    ];
+    const cornerHandles = {};
+    CORNER_DEFS.forEach((def) => {
+      const el = svgEl("rect", {
+        x: def.dx * room.width - HANDLE_SIZE / 2,
+        y: def.dy * room.height - HANDLE_SIZE / 2,
+        width: HANDLE_SIZE, height: HANDLE_SIZE,
+        class: "room-resize-handle",
+      });
+      el.style.cursor = def.cursor;
+      group.appendChild(el);
+      cornerHandles[def.key] = el;
+    });
+
+    function repositionCornerHandles() {
+      CORNER_DEFS.forEach((def) => {
+        const el = cornerHandles[def.key];
+        el.setAttribute("x", def.dx * room.width - HANDLE_SIZE / 2);
+        el.setAttribute("y", def.dy * room.height - HANDLE_SIZE / 2);
+      });
+    }
+
+    // このパーツが「直近で操作したもの」の時だけハンドルを見せる
+    const handleOwnerKey = `room:${room.id}`;
+    function refreshHandleVisibility() {
+      const isActive = activeHandleOwner === handleOwnerKey;
+      CORNER_DEFS.forEach((def) => {
+        cornerHandles[def.key].style.display = isActive ? "" : "none";
+      });
+    }
+    handleVisibilityRefreshers[handleOwnerKey] = refreshHandleVisibility;
+    refreshHandleVisibility();
+
+    function applyTransform() {
+      group.setAttribute("transform", `translate(${room.x}, ${room.y})`);
+    }
+    applyTransform();
+
+    group.addEventListener("pointerdown", () => setActiveHandleOwner(handleOwnerKey));
+
+    let containedFixtureIds = [];
+    attachDrag(
+      group,
+      () => {
+        // ドラッグ開始の瞬間だけ呼ばれる（部屋の移動と一緒に動かす家具を、この時点の
+        // 位置関係でスナップショットしておく）
+        containedFixtureIds = computeContainedFixtureIds(room);
+        return { x: room.x, y: room.y };
+      },
+      (result) => {
+        const dx = result.x - room.x;
+        const dy = result.y - room.y;
+        room.x = result.x;
+        room.y = result.y;
+        applyTransform();
+        repositionAttachedFixtures(room);
+        shiftFixturesByIds(containedFixtureIds, dx, dy);
+        repositionRoomLabel(room.id);
+      },
+      (rawX, rawY) => snapRoomPosition(room, rawX, rawY),
+      (clientX, clientY) => { if (onRoomClick) onRoomClick(room, clientX, clientY); }
+    );
+
+    // 各角のリサイズハンドル：部屋自体のドラッグと衝突しないようstopPropagationする。
+    // 毎回「直前のスナップ済みの値」を基準に積み上げると、1歩あたりの移動量が
+    // スナップ閾値未満の場合に同じグリッド線へ吸着し直され続けて動かなくなる
+    // （閾値未満のドラッグが繰り返し無効化される）ため、ドラッグ開始時の元サイズ・
+    // 元座標を固定基準として保持し、常にそこからの累計移動量で計算する。
+    // ドラッグした角の「対角」は、その辺を動かさないことで自然に固定される。
+    CORNER_DEFS.forEach((def) => {
+      const handleEl = cornerHandles[def.key];
+      const movesLeft = def.dx === 0; // 左辺を動かす角か（右辺=対角側は固定）
+      const movesTop = def.dy === 0; // 上辺を動かす角か（下辺=対角側は固定）
+      let resizing = false;
+      let resizeStartWorld = null;
+      let origin = null; // {x,y,width,height} ドラッグ開始時点の部屋の位置・大きさ
+      let resizeContainedOrigins = {}; // fixtureId -> ドラッグ開始時点のx,y
+
+      handleEl.addEventListener("pointerdown", (evt) => {
+        resizing = true;
+        handleEl.setPointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        resizeStartWorld = screenToWorld(evt.clientX, evt.clientY);
+        origin = { x: room.x, y: room.y, width: room.width, height: room.height };
+        resizeContainedOrigins = computeContainedFixtureOrigins(room);
+        evt.preventDefault();
+      });
+      handleEl.addEventListener("pointermove", (evt) => {
+        if (!resizing) return;
+        evt.stopPropagation();
+        const world = screenToWorld(evt.clientX, evt.clientY);
+        const dx = world.x - resizeStartWorld.x;
+        const dy = world.y - resizeStartWorld.y;
+
+        const MIN_ROOM_SIZE = GRID * 2;
+        if (movesLeft) {
+          const right = origin.x + origin.width; // 固定される対角の辺
+          const snappedLeft = snapRoomEdgeX(room, origin.x + dx);
+          room.x = Math.min(snappedLeft, right - MIN_ROOM_SIZE);
+          room.width = right - room.x;
+        } else {
+          const snappedRight = snapRoomEdgeX(room, origin.x + origin.width + dx);
+          room.width = Math.max(MIN_ROOM_SIZE, snappedRight - room.x);
+        }
+        if (movesTop) {
+          const bottom = origin.y + origin.height;
+          const snappedTop = snapRoomEdgeY(room, origin.y + dy);
+          room.y = Math.min(snappedTop, bottom - MIN_ROOM_SIZE);
+          room.height = bottom - room.y;
+        } else {
+          const snappedBottom = snapRoomEdgeY(room, origin.y + origin.height + dy);
+          room.height = Math.max(MIN_ROOM_SIZE, snappedBottom - room.y);
+        }
+
+        applyTransform();
+        fillRect.setAttribute("width", room.width);
+        fillRect.setAttribute("height", room.height);
+        repositionCornerHandles();
+        redrawWalls();
+        repositionAttachedFixtures(room);
+        // tl/tr/blなど、部屋の原点(x,y)自体が動く角をドラッグした時だけ、
+        // 中の家具も原点の移動量ぶんだけ一緒にずらす（brのように原点が動かない
+        // リサイズでは家具はその場に留まる＝家具の位置に部屋が伸びてくる形になる）
+        applyFixtureOriginShift(resizeContainedOrigins, room.x - origin.x, room.y - origin.y);
+        repositionRoomLabel(room.id);
+      });
+      handleEl.addEventListener("pointerup", (evt) => {
+        resizing = false;
+        handleEl.releasePointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        if (onDragEnd) onDragEnd();
+      });
+    });
+
+    roomGroups[room.id] = group;
+    layerRooms.appendChild(group);
+  }
+
+  // 部屋名・広さラベルは階段などの家具に隠れないよう、家具レイヤーより上の
+  // 専用レイヤー(layerRoomLabels)に部屋とは別のワールド座標で描く。
+  // 背景に半透明のピルを敷くことで、下に何が重なっても文字が読める。
+  function addRoomLabelNode(room) {
+    const group = svgEl("g", { class: "room-label-node" });
+
+    const labelBg = svgEl("rect", { class: "room-label-bg", rx: 6 });
+    group.appendChild(labelBg);
+    const labelText = svgEl("text", { class: "room-label", "text-anchor": "middle" });
+    labelText.textContent = room.label || "";
+    group.appendChild(labelText);
+
+    const tatamiBg = svgEl("rect", { class: "room-label-bg", rx: 6 });
+    group.appendChild(tatamiBg);
+    const tatamiText = svgEl("text", { class: "room-tatami", "text-anchor": "middle" });
+    tatamiText.textContent = room.tatami || "";
+    group.appendChild(tatamiText);
+    if (!room.tatami) {
+      tatamiBg.style.display = "none";
+      tatamiText.style.display = "none";
+    }
+
+    layerRoomLabels.appendChild(group);
+
+    function fitBgToText(text, bg) {
+      try {
+        const bbox = text.getBBox();
+        bg.setAttribute("x", bbox.x - 6);
+        bg.setAttribute("y", bbox.y - 3);
+        bg.setAttribute("width", bbox.width + 12);
+        bg.setAttribute("height", bbox.height + 6);
+      } catch (e) {
+        // 非表示状態などでgetBBoxが失敗しても致命的ではないため無視
+      }
+    }
+
+    function reposition() {
+      const x = room.x + room.width / 2;
+      labelText.setAttribute("x", x);
+      labelText.setAttribute("y", room.y + 20);
+      tatamiText.setAttribute("x", x);
+      tatamiText.setAttribute("y", room.y + room.height - 10);
+      // getBBox()は描画確定後でないと正しい値が取れないため、次のフレームで背景を合わせる
+      requestAnimationFrame(() => {
+        fitBgToText(labelText, labelBg);
+        if (room.tatami) fitBgToText(tatamiText, tatamiBg);
+      });
+    }
+    reposition();
+
+    roomLabelRepositioners[room.id] = reposition;
+  }
+
+  function repositionRoomLabel(roomId) {
+    const reposition = roomLabelRepositioners[roomId];
+    if (reposition) reposition();
+  }
+
+  // ===== 家具・設備アイコン =====
+  // ドア・窓（壁付け種類）は「上側の壁に取り付き、部屋の内側(+y方向)へ開く」向きを
+  // 基準(ローカルy=0が壁面、+yが室内側)に描く。それ以外の家具は中心(0,0)基準で描く。
+  function drawFixtureIcon(type, w, h, fixture) {
+    const g = svgEl("g", { class: "fixture-icon" });
+    const T = Madori.FixtureType;
+    function add(el) { g.appendChild(el); return el; }
+
+    // 左右反転(scale(-1,1))された家具の中でも文字だけは鏡文字にならないよう、
+    // 「位置は反転後の場所に、見た目は正しい向きのまま」描くための入れ子グループを作る。
+    // (親のscale(-1,1)を子でもう一度scale(-1,1)すると図形の向きだけ元に戻り、
+    //  translateした位置は反転後の場所のまま保たれる)
+    function addUprightText(x, y, attrs, content) {
+      const text = svgEl("text", Object.assign({ x: 0, y: 0 }, attrs));
+      text.textContent = content;
+      if (fixture && fixture.flipped) {
+        const wrapper = svgEl("g", { transform: `translate(${x}, ${y}) scale(-1, 1)` });
+        wrapper.appendChild(text);
+        g.appendChild(wrapper);
+      } else {
+        text.setAttribute("x", x);
+        text.setAttribute("y", y);
+        g.appendChild(text);
+      }
+      return text;
+    }
+
+    // ドアの扇形(開閉軌跡)を描く共通処理。hingeXが丁番側(壁に固定されている側)、
+    // oppositeXが枠の反対側。壁沿いの区間(y=0の直線)は塗りをきれいな扇形にするためだけに
+    // 使い、実際に見える輪郭線には含めない＝壁の開口部をまたぐ線を描いてしまうと、
+    // 見た目上「壁が閉じている」ように見えてしまい開口部と矛盾するため。
+    // sweep-flagはoppositeXがhingeXよりどちら側にあるかから自動で決める
+    // （手動指定すると向きを間違えやすく、実際に壁の外側に弧が出てしまう不具合があったため）
+    function addDoorFan(hingeX, oppositeX, radius) {
+      const sweepFlag = oppositeX >= hingeX ? 0 : 1;
+      add(svgEl("path", {
+        d: `M ${hingeX} 0 L ${hingeX} ${radius} A ${radius} ${radius} 0 0 ${sweepFlag} ${oppositeX} 0 Z`,
+        fill: "#eef3f5",
+        stroke: "none",
+      }));
+      add(svgEl("path", {
+        d: `M ${hingeX} 0 L ${hingeX} ${radius} A ${radius} ${radius} 0 0 ${sweepFlag} ${oppositeX} 0`,
+        fill: "none",
+        "stroke-width": 1.5,
+      }));
+    }
+
+    switch (type) {
+      case T.DOOR: {
+        // 開き戸：丁番は左端、右端まで振り切って開く扇形。
+        addDoorFan(-w / 2, w / 2, w);
+        break;
+      }
+      case T.SLIDING_DOOR: {
+        // 引き戸：走行レール(2本線)を全幅に、戸のパネルを開口部の半分弱に描く
+        add(svgEl("line", { x1: -w / 2, y1: -3, x2: w / 2, y2: -3 }));
+        add(svgEl("line", { x1: -w / 2, y1: 3, x2: w / 2, y2: 3 }));
+        add(svgEl("rect", { x: -w / 2, y: -5, width: w * 0.55, height: 10, fill: "#fdf6ea" }));
+        break;
+      }
+      case T.DOUBLE_DOOR: {
+        // 両開き戸：左右対称の2つの扇形が中央で組み合う
+        const r = w / 2;
+        addDoorFan(-w / 2, 0, r);
+        addDoorFan(w / 2, 0, r);
+        break;
+      }
+      case T.PARENT_CHILD_DOOR: {
+        // 親子扉：普段使う大きい戸(親)と、車椅子等の通過時だけ開ける小さい戸(子)が
+        // 並ぶ形式。それぞれ独立した扇形で、内側の境界点で組み合う。
+        const mainW = w * 0.68;
+        const childW = w - mainW;
+        const meet = -w / 2 + mainW;
+        addDoorFan(-w / 2, meet, mainW);
+        addDoorFan(w / 2, meet, childW);
+        break;
+      }
+      case T.FOLDING_DOOR: {
+        // 折れ戸：中央で折れるジグザグ線
+        add(svgEl("polyline", { points: `${-w / 2},0 0,${h * 0.7} ${w / 2},0`, fill: "none" }));
+        add(svgEl("circle", { cx: 0, cy: h * 0.7, r: 2.5 }));
+        break;
+      }
+      case T.OPENING: {
+        // 開口部(勝手口・扉なし)：ドアや窓の記号を何も描かず、壁に隙間(開口部)だけを作る。
+        // 見た目には何も描かないのが正しい表現（枠線が途切れていること自体が出入口の目印になる）
+        break;
+      }
+      case T.WINDOW: {
+        // 窓：全国共通で最も一般的な「引き違い窓」の表現＝平行な2本線
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, fill: "#eaf6ff", stroke: "none" }));
+        add(svgEl("line", { x1: -w / 2, y1: -h * 0.22, x2: w / 2, y2: -h * 0.22, "stroke-width": 1.5 }));
+        add(svgEl("line", { x1: -w / 2, y1: h * 0.22, x2: w / 2, y2: h * 0.22, "stroke-width": 1.5 }));
+        break;
+      }
+      case T.TOILET: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h * 0.28, rx: 3 }));
+        add(svgEl("ellipse", { cx: 0, cy: h * 0.12, rx: w / 2.4, ry: h * 0.36 }));
+        break;
+      }
+      case T.BATHTUB: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: h / 2.2, fill: "#eaf6ff" }));
+        break;
+      }
+      case T.SINK: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 6 }));
+        add(svgEl("ellipse", { cx: 0, cy: 0, rx: w / 3, ry: h / 4, fill: "#eaf6ff" }));
+        break;
+      }
+      case T.KITCHEN: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 3 }));
+        add(svgEl("rect", { x: -w / 2 + 6, y: -h / 4, width: w * 0.32, height: h / 2, fill: "#eaf6ff" }));
+        add(svgEl("circle", { cx: w * 0.14, cy: 0, r: h * 0.16, fill: "none" }));
+        add(svgEl("circle", { cx: w * 0.34, cy: 0, r: h * 0.16, fill: "none" }));
+        break;
+      }
+      case T.BED: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 4 }));
+        add(svgEl("rect", { x: -w / 2 + 6, y: -h / 2 + 6, width: w - 12, height: h * 0.16, rx: 3, fill: "#eaf6ff" }));
+        break;
+      }
+      case T.TABLE: {
+        add(svgEl("circle", { cx: 0, cy: 0, r: w / 2, fill: "#fffdf5" }));
+        [0, 90, 180, 270].forEach((deg) => {
+          const rad = (deg * Math.PI) / 180;
+          const cx = Math.cos(rad) * (w / 2 + 8);
+          const cy = Math.sin(rad) * (w / 2 + 8);
+          add(svgEl("circle", { cx, cy, r: 4 }));
+        });
+        break;
+      }
+      case T.WHEELCHAIR: {
+        add(svgEl("circle", { cx: -w * 0.1, cy: h * 0.15, r: h * 0.32, fill: "none", "stroke-width": 2.5 }));
+        add(svgEl("circle", { cx: w * 0.32, cy: h * 0.38, r: h * 0.1, fill: "none" }));
+        add(svgEl("path", { d: `M ${-w * 0.1} ${-h * 0.3} L ${-w * 0.1} ${h * 0.15} L ${w * 0.15} ${h * 0.3}`, fill: "none" }));
+        break;
+      }
+      case T.PORTABLE_TOILET: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 4 }));
+        add(svgEl("ellipse", { cx: 0, cy: -h * 0.1, rx: w / 3, ry: h * 0.18, fill: "#eaf6ff" }));
+        break;
+      }
+      case T.HANDRAIL_V: {
+        // 実際の住宅改修見取り図例では、手すりは片端にだけ点を打つ（両端に点は付けない）
+        add(svgEl("line", { x1: 0, y1: -h / 2, x2: 0, y2: h / 2, "stroke-width": 3 }));
+        add(svgEl("circle", { cx: 0, cy: -h / 2, r: 3.5 }));
+        break;
+      }
+      case T.HANDRAIL_H: {
+        add(svgEl("line", { x1: -w / 2, y1: 0, x2: w / 2, y2: 0, "stroke-width": 3 }));
+        add(svgEl("circle", { cx: -w / 2, cy: 0, r: 3.5 }));
+        break;
+      }
+      case T.HANDRAIL_L: {
+        add(svgEl("line", { x1: -w / 2, y1: h / 2, x2: -w / 2, y2: -h / 2, "stroke-width": 3 }));
+        add(svgEl("line", { x1: -w / 2, y1: -h / 2, x2: w / 2, y2: -h / 2, "stroke-width": 3 }));
+        add(svgEl("circle", { cx: -w / 2, cy: -h / 2, r: 3.5 }));
+        break;
+      }
+      case T.STEP: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, fill: "url(#madori-hatch)" }));
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, fill: "none" }));
+        break;
+      }
+      case T.RAMP: {
+        add(svgEl("polygon", {
+          points: `${-w / 2},${h / 2} ${w / 2},${h / 2} ${w / 2},${-h / 2}`,
+          fill: "url(#madori-hatch)",
+        }));
+        break;
+      }
+      case T.STAIRS: {
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, fill: "#fdf6ea" }));
+        const treadCount = Math.max(3, Math.round(h / 18));
+        for (let i = 1; i < treadCount; i++) {
+          const ty = -h / 2 + (h / treadCount) * i;
+          add(svgEl("line", { x1: -w / 2, y1: ty, x2: w / 2, y2: ty }));
+        }
+        add(svgEl("line", { x1: 0, y1: h / 2 - 10, x2: 0, y2: -h / 2 + 14, "stroke-width": 2 }));
+        add(svgEl("polygon", { points: `0,${-h / 2 + 6} ${-6},${-h / 2 + 16} 6,${-h / 2 + 16}`, fill: "currentColor" }));
+        addUprightText(w / 2 - 4, h / 2 - 6, { "text-anchor": "end", class: "fixture-mini-label" }, "階段");
+        break;
+      }
+      case T.NORTH: {
+        add(svgEl("circle", { cx: 0, cy: 0, r: w / 2, fill: "#fffdf5" }));
+        add(svgEl("path", { d: `M 0 ${-h / 2 + 4} L ${w * 0.14} ${h * 0.12} L 0 0 L ${-w * 0.14} ${h * 0.12} Z`, fill: "#2f3b52" }));
+        addUprightText(0, h / 2 - 3, { "text-anchor": "middle", class: "fixture-mini-label" }, "北");
+        break;
+      }
+      case T.ARROW: {
+        add(svgEl("line", { x1: -w / 2, y1: 0, x2: w / 2 - 6, y2: 0, "stroke-width": 2.5 }));
+        add(svgEl("polygon", { points: `${w / 2},0 ${w / 2 - 10},-6 ${w / 2 - 10},6`, fill: "currentColor" }));
+        break;
+      }
+      case T.CUSTOM: {
+        // 家具・設備の一覧に無いもの（押入・PC台・仏壇など）を、選んだ図形＋自由な名前で表現する。
+        // 名前はアイコンの中に直接表示する（他の種類のような任意の「注釈」ではなく、これ自体が主役のため）。
+        const shape = (fixture && fixture.customShape) || Madori.CustomShape.RECT;
+        const S = Madori.CustomShape;
+        if (shape === S.CIRCLE) {
+          add(svgEl("ellipse", { cx: 0, cy: 0, rx: w / 2, ry: h / 2, fill: "#fffdf5" }));
+        } else if (shape === S.TRIANGLE) {
+          add(svgEl("polygon", { points: `0,${-h / 2} ${w / 2},${h / 2} ${-w / 2},${h / 2}`, fill: "#fffdf5" }));
+        } else if (shape === S.DIAMOND) {
+          add(svgEl("polygon", { points: `0,${-h / 2} ${w / 2},0 0,${h / 2} ${-w / 2},0`, fill: "#fffdf5" }));
+        } else {
+          add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h, rx: 6, fill: "#fffdf5" }));
+        }
+        addUprightText(0, 4, { "text-anchor": "middle", class: "fixture-mini-label custom-fixture-name" }, (fixture && fixture.label) || "？");
+        break;
+      }
+      default:
+        add(svgEl("rect", { x: -w / 2, y: -h / 2, width: w, height: h }));
+    }
+    return g;
+  }
+
+  function ensureHatchPattern() {
+    let defs = svg.querySelector("defs");
+    if (!defs) {
+      defs = svgEl("defs", {});
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    if (defs.querySelector("#madori-hatch")) return;
+    const pattern = svgEl("pattern", {
+      id: "madori-hatch", width: 8, height: 8, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)",
+    });
+    pattern.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: 8, stroke: "#4d8fff", "stroke-width": 2 }));
+    defs.appendChild(pattern);
+  }
+
+  function fixtureHitBox(fixture, wallAttachable) {
+    if (wallAttachable) {
+      // 壁付け種類はローカルy=0〜height方向(壁面〜室内側)に描かれるため、
+      // 当たり判定もその範囲＋少し の余裕を持たせる。ただし部屋の内側へ広げすぎると
+      // （特に小さい部屋で）ドアの当たり判定が部屋本体のドラッグ操作を覆ってしまうため、
+      // パディングは控えめにする（見た目のアイコンとほぼ同じ範囲＋数px）。
+      return { x: -fixture.width / 2 - 4, y: -6, w: fixture.width + 8, h: fixture.height + 6 };
+    }
+    const w = Math.max(fixture.width, MIN_HIT);
+    const h = Math.max(fixture.height, MIN_HIT);
+    return { x: -w / 2, y: -h / 2, w, h };
+  }
+
+  // ドア・窓はローカルy=0〜height(壁面〜室内側)基準、それ以外は中心(0,0)基準で描く
+  // （drawFixtureIconの前提と揃える）。リサイズ・回転ハンドルの位置計算に使う。
+  function fixtureTopLocalY(fixture, wallAttachable) {
+    return wallAttachable ? 0 : -fixture.height / 2;
+  }
+
+  // 壁に取り付いたドア・窓の開口部の中心位置(offset)・座標を、現在の幅に合わせて
+  // クランプし直す（部屋の移動・リサイズ時、および家具自体のリサイズ時の両方から使う）。
+  function clampFixtureToWall(fixture, room) {
+    const len = wallLength(room, fixture.wall.side);
+    const margin = Math.min(fixture.width / 2, len / 2);
+    fixture.wall.offset = Math.min(Math.max(fixture.wall.offset, margin), Math.max(len - margin, margin));
+    const p = wallPointWorld(room, fixture.wall.side, fixture.wall.offset);
+    fixture.x = p.x;
+    fixture.y = p.y;
+  }
+
+  // 手動での自由回転の角度を15度刻みの近くで軽くスナップさせる（±4度以内）。
+  // 「大体綺麗な角度」を選びやすくしつつ、90度に縛られない自由な角度も許す。
+  function snapAngleSoftly(deg) {
+    const nearest = Math.round(deg / 15) * 15;
+    return Math.abs(deg - nearest) < 4 ? ((nearest % 360) + 360) % 360 : deg;
+  }
+
+  function addFixtureNode(fixture) {
+    const wallAttachable = Madori.isWallAttachable(fixture.type);
+    const group = svgEl("g", { class: `fixture-node fixture-${fixture.type}` });
+    group.style.cursor = "grab";
+
+    // クリック・ドラッグ用の透明な当たり判定（見た目には出さず、fill="transparent"で
+    // ヒットテスト対象にする。fill="none"だとクリックを拾えないので注意）。
+    const hitBox = fixtureHitBox(fixture, wallAttachable);
+    const hitRect = svgEl("rect", {
+      x: hitBox.x, y: hitBox.y, width: hitBox.w, height: hitBox.h,
+      class: "fixture-hit-area",
+    });
+    group.appendChild(hitRect);
+
+    let icon = drawFixtureIcon(fixture.type, fixture.width, fixture.height, fixture);
+    group.appendChild(icon);
+
+    // CUSTOM種類は名前がアイコンの中に直接描かれるため、下に重ねて表示する必要が無い
+    if (fixture.label && fixture.type !== Madori.FixtureType.CUSTOM) {
+      const labelY = (wallAttachable ? fixture.height : fixture.height / 2) + 14;
+      const label = svgEl("text", { x: 0, y: 0, class: "fixture-label", "text-anchor": "middle" });
+      label.textContent = fixture.label;
+      // x=0の中央寄せなので反転しても位置は変わらないが、文字が鏡文字にならないよう
+      // 反転中は入れ子のscale(-1,1)で見た目だけ元に戻す（アイコン内のaddUprightTextと同じ考え方）
+      if (fixture.flipped) {
+        const wrapper = svgEl("g", { transform: `translate(0, ${labelY}) scale(-1, 1)` });
+        wrapper.appendChild(label);
+        group.appendChild(wrapper);
+      } else {
+        label.setAttribute("y", labelY);
+        group.appendChild(label);
+      }
+    }
+
+    // リサイズハンドル（全種類に対応：階段はもちろん、便器やベッドも部屋に合わせて
+    // 大きさを変えられるようにする）。壁付けのドア・窓は「開口部の幅」だけが意味を持つため
+    // 従来通り1つ（壁の内側方向の角）だけ、それ以外は四隅どこからでも調整できるようにする
+    // （対角のハンドルが固定されるので、部屋との位置合わせがしやすい）。
+    const cornerDefs = wallAttachable
+      ? [{ key: "br", cursor: "nwse-resize", dx: 1, dy: 1 }]
+      : [
+          { key: "tl", cursor: "nwse-resize", dx: 0, dy: 0 },
+          { key: "tr", cursor: "nesw-resize", dx: 1, dy: 0 },
+          { key: "bl", cursor: "nesw-resize", dx: 0, dy: 1 },
+          { key: "br", cursor: "nwse-resize", dx: 1, dy: 1 },
+        ];
+    const resizeHandles = {};
+    function handleLocalX(def) { return def.dx === 0 ? -fixture.width / 2 : fixture.width / 2; }
+    function handleLocalY(def) { return fixtureTopLocalY(fixture, wallAttachable) + def.dy * fixture.height; }
+    cornerDefs.forEach((def) => {
+      const el = svgEl("rect", {
+        x: handleLocalX(def) - HANDLE_SIZE / 2,
+        y: handleLocalY(def) - HANDLE_SIZE / 2,
+        width: HANDLE_SIZE, height: HANDLE_SIZE, class: "room-resize-handle",
+      });
+      el.style.cursor = def.cursor;
+      group.appendChild(el);
+      resizeHandles[def.key] = el;
+    });
+
+    // このパーツが「直近で操作したもの」の時だけハンドルを見せる
+    const handleOwnerKey = `fixture:${fixture.id}`;
+    function refreshHandleVisibility() {
+      const isActive = activeHandleOwner === handleOwnerKey;
+      Object.keys(resizeHandles).forEach((key) => {
+        resizeHandles[key].style.display = isActive ? "" : "none";
+      });
+      if (rotateHandle) rotateHandle.style.display = isActive ? "" : "none";
+    }
+    handleVisibilityRefreshers[handleOwnerKey] = refreshHandleVisibility;
+    group.addEventListener("pointerdown", () => setActiveHandleOwner(handleOwnerKey));
+
+    // 回転ハンドル（壁にフィット中は向きが自動で決まるため出さない。フィットしていない
+    // 家具だけ、ドラッグで自由な角度に回せる小さな丸を上に出す）
+    let rotateHandle = null;
+    let rotateKnob = null;
+    function buildRotateHandle() {
+      if (rotateHandle) { group.removeChild(rotateHandle); rotateHandle = null; rotateKnob = null; }
+      if (fixture.wall) { refreshHandleVisibility(); return; }
+      const topY = fixtureTopLocalY(fixture, wallAttachable) - 22;
+      const lineStartY = fixtureTopLocalY(fixture, wallAttachable);
+      rotateHandle = svgEl("g", { class: "fixture-rotate-handle" });
+      rotateHandle.appendChild(svgEl("line", { x1: 0, y1: lineStartY, x2: 0, y2: topY, class: "rotate-handle-line" }));
+      rotateKnob = svgEl("circle", { cx: 0, cy: topY, r: 6, class: "rotate-handle-knob" });
+      rotateHandle.appendChild(rotateKnob);
+      rotateHandle.style.cursor = "grab";
+      group.appendChild(rotateHandle);
+      refreshHandleVisibility();
+
+      let rotating = false;
+      rotateKnob.addEventListener("pointerdown", (evt) => {
+        rotating = true;
+        rotateKnob.setPointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        evt.preventDefault();
+      });
+      rotateKnob.addEventListener("pointermove", (evt) => {
+        if (!rotating) return;
+        evt.stopPropagation();
+        const world = screenToWorld(evt.clientX, evt.clientY);
+        const dx = world.x - fixture.x;
+        const dy = world.y - fixture.y;
+        let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+        deg = ((deg % 360) + 360) % 360;
+        fixture.rotation = snapAngleSoftly(deg);
+        applyTransform();
+      });
+      rotateKnob.addEventListener("pointerup", (evt) => {
+        rotating = false;
+        rotateKnob.releasePointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        if (onDragEnd) onDragEnd();
+      });
+    }
+    buildRotateHandle();
+
+    function applyTransform() {
+      const flip = fixture.flipped ? -1 : 1;
+      group.setAttribute(
+        "transform",
+        `translate(${fixture.x}, ${fixture.y}) rotate(${fixture.rotation}) scale(${flip}, 1)`
+      );
+    }
+    applyTransform();
+
+    attachDrag(
+      group,
+      () => ({ x: fixture.x, y: fixture.y }),
+      (result) => {
+        const previousRoomId = fixture.wall ? fixture.wall.roomId : null;
+        fixture.x = result.x;
+        fixture.y = result.y;
+        if (wallAttachable) {
+          fixture.rotation = result.rotation;
+          fixture.wall = result.wall;
+        }
+        applyTransform();
+        if (wallAttachable) {
+          const nextRoomId = fixture.wall ? fixture.wall.roomId : null;
+          if (previousRoomId && previousRoomId !== nextRoomId) redrawRoomWalls(previousRoomId);
+          if (nextRoomId) redrawRoomWalls(nextRoomId);
+          if (previousRoomId !== nextRoomId) buildRotateHandle(); // 壁への出入りで回転ハンドルの有無が変わる
+        }
+      },
+      (rawX, rawY) => {
+        if (!wallAttachable) {
+          const wallSnap = computeFurnitureWallSnap(fixture.width, fixture.height, fixture.rotation, rawX, rawY);
+          return {
+            x: wallSnap && wallSnap.x !== null ? wallSnap.x : snapToGridSoft(rawX),
+            y: wallSnap && wallSnap.y !== null ? wallSnap.y : snapToGridSoft(rawY),
+          };
+        }
+        const attachment = computeWallAttachment(fixture.width, rawX, rawY, WALL_SNAP_THRESHOLD);
+        if (attachment) {
+          const room = currentDocument.rooms.find((r) => r.id === attachment.roomId);
+          const point = wallPointWorld(room, attachment.side, attachment.offset);
+          return {
+            x: point.x,
+            y: point.y,
+            rotation: Madori.WALL_SIDE_ROTATION[attachment.side],
+            wall: { roomId: attachment.roomId, side: attachment.side, offset: attachment.offset },
+          };
+        }
+        return { x: snapToGridSoft(rawX), y: snapToGridSoft(rawY), rotation: fixture.rotation, wall: null };
+      },
+      (clientX, clientY) => { if (onFixtureClick) onFixtureClick(fixture, clientX, clientY); }
+    );
+
+    // リサイズ後に見た目(アイコン・当たり判定・各種ハンドル位置)をまとめて更新する
+    function refreshAfterResize() {
+      const newIcon = drawFixtureIcon(fixture.type, fixture.width, fixture.height, fixture);
+      group.replaceChild(newIcon, icon);
+      icon = newIcon;
+      const newHitBox = fixtureHitBox(fixture, wallAttachable);
+      hitRect.setAttribute("x", newHitBox.x);
+      hitRect.setAttribute("y", newHitBox.y);
+      hitRect.setAttribute("width", newHitBox.w);
+      hitRect.setAttribute("height", newHitBox.h);
+      cornerDefs.forEach((def) => {
+        const el = resizeHandles[def.key];
+        el.setAttribute("x", handleLocalX(def) - HANDLE_SIZE / 2);
+        el.setAttribute("y", handleLocalY(def) - HANDLE_SIZE / 2);
+      });
+      if (rotateKnob) {
+        const topY = fixtureTopLocalY(fixture, wallAttachable) - 22;
+        rotateHandle.firstChild.setAttribute("y1", fixtureTopLocalY(fixture, wallAttachable));
+        rotateHandle.firstChild.setAttribute("y2", topY);
+        rotateKnob.setAttribute("cy", topY);
+      }
+    }
+
+    cornerDefs.forEach((def) => {
+      const handleEl = resizeHandles[def.key];
+      const movesRight = def.dx === 1;
+      const movesBottom = def.dy === 1;
+      let resizing = false;
+      let resizeStartWorld = null;
+      let originWidth = 0;
+      let originHeight = 0;
+      let originCenter = null;
+      let originRotationRad = 0;
+
+      handleEl.addEventListener("pointerdown", (evt) => {
+        resizing = true;
+        handleEl.setPointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        resizeStartWorld = screenToWorld(evt.clientX, evt.clientY);
+        originWidth = fixture.width;
+        originHeight = fixture.height;
+        originCenter = { x: fixture.x, y: fixture.y };
+        originRotationRad = (fixture.rotation * Math.PI) / 180;
+        evt.preventDefault();
+      });
+      handleEl.addEventListener("pointermove", (evt) => {
+        if (!resizing) return;
+        evt.stopPropagation();
+        const world = screenToWorld(evt.clientX, evt.clientY);
+        const dx = world.x - resizeStartWorld.x;
+        const dy = world.y - resizeStartWorld.y;
+
+        if (wallAttachable) {
+          // 壁付け種類は「幅(壁に沿った長さ)」だけを変える。太さ(高さ)はドアや窓の
+          // 厚みを表す小さな値のため、ハンドルをドラッグした際に斜めのブレで一緒に
+          // 変わってしまうと「長さだけ変えたいのに厚みも変わる」という誤動作になる。
+          // 幅は壁の向き(回転)に沿った成分だけをドラッグ量から取り出して使う。
+          const rot = (fixture.rotation * Math.PI) / 180;
+          const alongWall = dx * Math.cos(rot) + dy * Math.sin(rot);
+          fixture.width = Math.max(GRID, snapToGridOnly(originWidth + alongWall * 2));
+        } else {
+          // 中心基準で描くアイコンは、ドラッグした角の「対角」を世界座標上で固定するため、
+          // マウスの移動量をアイコン自身の回転角の逆回転でローカル座標に変換してから
+          // 幅・高さを計算し、対角が動かないよう中心(fixture.x/y)を半分だけ補正する。
+          const localDx = dx * Math.cos(originRotationRad) + dy * Math.sin(originRotationRad);
+          const localDy = -dx * Math.sin(originRotationRad) + dy * Math.cos(originRotationRad);
+
+          const newWidth = Math.max(GRID, snapToGridOnly(originWidth + (movesRight ? localDx : -localDx)));
+          const newHeight = Math.max(GRID, snapToGridOnly(originHeight + (movesBottom ? localDy : -localDy)));
+          const widthDelta = newWidth - originWidth;
+          const heightDelta = newHeight - originHeight;
+          const shiftLocalX = (movesRight ? widthDelta : -widthDelta) / 2;
+          const shiftLocalY = (movesBottom ? heightDelta : -heightDelta) / 2;
+          const shiftWorldX = shiftLocalX * Math.cos(originRotationRad) - shiftLocalY * Math.sin(originRotationRad);
+          const shiftWorldY = shiftLocalX * Math.sin(originRotationRad) + shiftLocalY * Math.cos(originRotationRad);
+
+          fixture.width = newWidth;
+          fixture.height = newHeight;
+          fixture.x = originCenter.x + shiftWorldX;
+          fixture.y = originCenter.y + shiftWorldY;
+          applyTransform();
+        }
+
+        refreshAfterResize();
+
+        if (fixture.wall) {
+          const room = currentDocument.rooms.find((r) => r.id === fixture.wall.roomId);
+          if (room) {
+            clampFixtureToWall(fixture, room);
+            applyTransform();
+            redrawRoomWalls(room.id);
+          }
+        }
+      });
+      handleEl.addEventListener("pointerup", (evt) => {
+        resizing = false;
+        handleEl.releasePointerCapture(evt.pointerId);
+        evt.stopPropagation();
+        if (onDragEnd) onDragEnd();
+      });
+    });
+
+    fixtureGroups[fixture.id] = group;
+    layerFixtures.appendChild(group);
+  }
+
+  // ===== テキスト注釈 =====
+  function addAnnotationNode(annotation) {
+    const group = svgEl("g", { class: "annotation-node" });
+    group.style.cursor = "grab";
+
+    const bg = svgEl("rect", { class: "annotation-bg", rx: 6 });
+    group.appendChild(bg);
+    const text = svgEl("text", { x: 0, y: 0, class: "annotation-text", "text-anchor": "middle" });
+    text.textContent = annotation.text || "";
+    group.appendChild(text);
+
+    function applyTransform() {
+      group.setAttribute("transform", `translate(${annotation.x}, ${annotation.y})`);
+    }
+    applyTransform();
+
+    layerAnnotations.appendChild(group);
+    // getBBox()はDOMに接続されていないと使えないため、appendChildの後で背景サイズを合わせる
+    requestAnimationFrame(() => {
+      try {
+        const bbox = text.getBBox();
+        bg.setAttribute("x", bbox.x - 8);
+        bg.setAttribute("y", bbox.y - 4);
+        bg.setAttribute("width", bbox.width + 16);
+        bg.setAttribute("height", bbox.height + 8);
+      } catch (e) {
+        // 非表示状態などでgetBBoxが失敗しても致命的ではないため無視
+      }
+    });
+
+    attachDrag(
+      group,
+      () => ({ x: annotation.x, y: annotation.y }),
+      (result) => { annotation.x = result.x; annotation.y = result.y; applyTransform(); },
+      (rawX, rawY) => ({ x: snapToGridSoft(rawX), y: snapToGridSoft(rawY) }),
+      (clientX, clientY) => { if (onAnnotationClick) onAnnotationClick(annotation, clientX, clientY); }
+    );
+
+    annotationGroups[annotation.id] = group;
+  }
+
+  // ===== 全体描画 =====
+  function renderDocument(doc) {
+    currentDocument = doc;
+    svg.innerHTML = "";
+    const defs = svgEl("defs", {});
+    svg.appendChild(defs);
+    viewportGroup = svgEl("g", { id: "viewport" });
+    gridLayer = svgEl("g", { id: "layer-grid" });
+    layerRooms = svgEl("g", { id: "layer-rooms" });
+    layerFixtures = svgEl("g", { id: "layer-fixtures" });
+    layerRoomLabels = svgEl("g", { id: "layer-room-labels" });
+    layerAnnotations = svgEl("g", { id: "layer-annotations" });
+    svg.appendChild(viewportGroup);
+    viewportGroup.appendChild(gridLayer);
+    viewportGroup.appendChild(layerRooms);
+    viewportGroup.appendChild(layerFixtures);
+    viewportGroup.appendChild(layerRoomLabels);
+    viewportGroup.appendChild(layerAnnotations);
+    applyViewTransform();
+
+    ensureHatchPattern();
+    renderGrid();
+
+    Object.keys(roomGroups).forEach((k) => delete roomGroups[k]);
+    Object.keys(fixtureGroups).forEach((k) => delete fixtureGroups[k]);
+    Object.keys(annotationGroups).forEach((k) => delete annotationGroups[k]);
+    Object.keys(roomWallRedrawers).forEach((k) => delete roomWallRedrawers[k]);
+    Object.keys(roomLabelRepositioners).forEach((k) => delete roomLabelRepositioners[k]);
+    Object.keys(handleVisibilityRefreshers).forEach((k) => delete handleVisibilityRefreshers[k]);
+
+    doc.rooms.forEach(addRoomNode);
+    doc.fixtures.forEach(addFixtureNode);
+    doc.rooms.forEach(addRoomLabelNode);
+    doc.annotations.forEach(addAnnotationNode);
+    // 壁の開口部の重なりチェックは、fixtureGroupsが全部揃った後でないと反映できないため最後に行う
+    doc.rooms.forEach(refreshWallConflictHighlights);
+  }
+
+  Madori.canvas = {
+    init,
+    getSvgElement: () => svg,
+    renderDocument,
+    screenToWorld,
+    fitToView,
+    isWorldPointVisible,
+    zoomBy,
+    setZoomChangeHandler,
+    setRoomClickHandler,
+    setFixtureClickHandler,
+    setAnnotationClickHandler,
+    setDragEndHandler,
+    GRID,
+  };
+})((window.Madori = window.Madori || {}));
+
+</script>
+  <script>
+// 家具パレットの描画、部屋・家具・テキスト注釈のその場編集ポップアップ、
+// 保存データ一覧の描画を担当する。（genogram_web/forms.jsのポップアップ方式を踏襲）
+
+(function (Madori) {
+  let activePopup = null; // { el, targetKind, targetId }
+
+  function closePopup() {
+    if (activePopup) {
+      activePopup.el.remove();
+      activePopup = null;
+    }
+  }
+
+  // クリックした座標の右下に少しずらして表示。画面端では収まるようクランプする。
+  function positionPopup(el, clientX, clientY) {
+    document.body.appendChild(el);
+    const offset = 16;
+    let left = clientX + offset;
+    let top = clientY + offset;
+    const rect = el.getBoundingClientRect();
+    if (left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
+    if (top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
+    if (left < 8) left = 8;
+    if (top < 8) top = 8;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  }
+
+  function makePopupShell(title) {
+    const el = document.createElement("div");
+    el.className = "edit-popup";
+    const header = document.createElement("div");
+    header.className = "edit-popup-header";
+    const h = document.createElement("strong");
+    h.textContent = title;
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "popup-close-x";
+    closeBtn.textContent = "✕";
+    closeBtn.addEventListener("click", closePopup);
+    header.appendChild(h);
+    header.appendChild(closeBtn);
+    el.appendChild(header);
+    return el;
+  }
+
+  function isSameTarget(kind, id) {
+    return !!activePopup && activePopup.targetKind === kind && activePopup.targetId === id;
+  }
+
+  // ===== 部屋の編集ポップアップ =====
+  function openRoomPopup(room, clientX, clientY, callbacks) {
+    if (isSameTarget("room", room.id)) { closePopup(); return; }
+    closePopup();
+    const el = makePopupShell("部屋を編集");
+
+    const labelRow = document.createElement("label");
+    labelRow.textContent = "部屋の名前";
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.value = room.label || "";
+    labelInput.addEventListener("input", () => callbacks.onChange({ label: labelInput.value }));
+    // inputは1文字ごとの即時反映用、changeはフォーカスが外れた時に1回だけ発火する。
+    // 編集ひとまとまりを1つのUndoステップにするため、履歴の記録はchange側でまとめて行う。
+    labelInput.addEventListener("change", () => callbacks.onCommit());
+    labelRow.appendChild(labelInput);
+    el.appendChild(labelRow);
+
+    const tatamiRow = document.createElement("label");
+    tatamiRow.textContent = "広さ・メモ（任意、例：6帖）";
+    const tatamiInput = document.createElement("input");
+    tatamiInput.type = "text";
+    tatamiInput.value = room.tatami || "";
+    tatamiInput.addEventListener("input", () => callbacks.onChange({ tatami: tatamiInput.value }));
+    tatamiInput.addEventListener("change", () => callbacks.onCommit());
+    tatamiRow.appendChild(tatamiInput);
+    el.appendChild(tatamiRow);
+
+    const duplicateBtn = document.createElement("button");
+    duplicateBtn.type = "button";
+    duplicateBtn.className = "popup-action-button";
+    duplicateBtn.textContent = "📋 複製";
+    duplicateBtn.addEventListener("click", () => {
+      callbacks.onDuplicate();
+      closePopup();
+    });
+    el.appendChild(duplicateBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "popup-delete-button";
+    deleteBtn.textContent = "🗑 この部屋を削除";
+    deleteBtn.addEventListener("click", () => {
+      if (!window.confirm(`「${room.label || "この部屋"}」を削除しますか？`)) return;
+      callbacks.onDelete();
+      closePopup();
+    });
+    el.appendChild(deleteBtn);
+
+    positionPopup(el, clientX, clientY);
+    activePopup = { el, targetKind: "room", targetId: room.id };
+  }
+
+  // ===== 家具・設備の編集ポップアップ =====
+  function openFixturePopup(fixture, clientX, clientY, callbacks) {
+    if (isSameTarget("fixture", fixture.id)) { closePopup(); return; }
+    closePopup();
+    const entry = Madori.findCatalogEntry(fixture.type);
+    const isCustom = fixture.type === Madori.FixtureType.CUSTOM;
+    // 自由入力の家具は、汎用の「✏️ 自由入力」という見出しより、自分で付けた名前を
+    // 見出しに出した方が分かりやすい
+    const el = makePopupShell(isCustom ? fixture.label || entry.label : entry.label);
+
+    if (fixture.wall) {
+      // 壁に自動フィットしている間は向きが壁に合わせて自動で決まるが、90度回転ボタンは
+      // ここでも押せるようにする（押すと壁から自動的に外れて回転する）。反転は丁番側の
+      // 左右を変えるだけで壁への取り付き方には影響しないため、壁フィット中でも使える。
+      const wallHint = document.createElement("p");
+      wallHint.className = "popup-hint-text";
+      wallHint.textContent = "壁にフィットしています（向きは自動）。90度回転すると壁から外れて自由に回転できます。";
+      el.appendChild(wallHint);
+    }
+    const rotateBtn = document.createElement("button");
+    rotateBtn.type = "button";
+    rotateBtn.className = "popup-action-button";
+    rotateBtn.textContent = "↻ 90度回転";
+    rotateBtn.addEventListener("click", () => callbacks.onRotate());
+    el.appendChild(rotateBtn);
+
+    const flipBtn = document.createElement("button");
+    flipBtn.type = "button";
+    flipBtn.className = "popup-action-button";
+    flipBtn.textContent = "↔ 左右反転";
+    flipBtn.addEventListener("click", () => callbacks.onFlip());
+    el.appendChild(flipBtn);
+
+    const labelRow = document.createElement("label");
+    labelRow.textContent = isCustom ? "名前（アイコンに表示されます）" : "注釈（任意、例：高さ75cm）";
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.value = fixture.label || "";
+    labelInput.addEventListener("input", () => callbacks.onLabelChange(labelInput.value));
+    labelInput.addEventListener("change", () => callbacks.onCommit());
+    labelRow.appendChild(labelInput);
+    el.appendChild(labelRow);
+
+    const duplicateBtn = document.createElement("button");
+    duplicateBtn.type = "button";
+    duplicateBtn.className = "popup-action-button";
+    duplicateBtn.textContent = "📋 複製";
+    duplicateBtn.addEventListener("click", () => {
+      callbacks.onDuplicate();
+      closePopup();
+    });
+    el.appendChild(duplicateBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "popup-delete-button";
+    deleteBtn.textContent = "🗑 削除";
+    deleteBtn.addEventListener("click", () => {
+      if (!window.confirm(`「${entry.label}」を削除しますか？`)) return;
+      callbacks.onDelete();
+      closePopup();
+    });
+    el.appendChild(deleteBtn);
+
+    positionPopup(el, clientX, clientY);
+    activePopup = { el, targetKind: "fixture", targetId: fixture.id };
+  }
+
+  // ===== テキスト注釈の編集ポップアップ =====
+  function openAnnotationPopup(annotation, clientX, clientY, callbacks) {
+    if (isSameTarget("annotation", annotation.id)) { closePopup(); return; }
+    closePopup();
+    const el = makePopupShell("テキストを編集");
+
+    const textArea = document.createElement("textarea");
+    textArea.rows = 3;
+    textArea.value = annotation.text || "";
+    textArea.addEventListener("input", () => callbacks.onTextChange(textArea.value));
+    textArea.addEventListener("change", () => callbacks.onCommit());
+    el.appendChild(textArea);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "popup-delete-button";
+    deleteBtn.textContent = "🗑 削除";
+    deleteBtn.addEventListener("click", () => {
+      if (!window.confirm("このテキストを削除しますか？")) return;
+      callbacks.onDelete();
+      closePopup();
+    });
+    el.appendChild(deleteBtn);
+
+    positionPopup(el, clientX, clientY);
+    activePopup = { el, targetKind: "annotation", targetId: annotation.id };
+    textArea.focus();
+  }
+
+  // ===== 家具パレット =====
+  function renderPalette(container, onAdd) {
+    container.innerHTML = "";
+    Madori.FIXTURE_CATALOG.forEach((entry) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "palette-button";
+      btn.textContent = entry.label;
+      btn.addEventListener("click", () => onAdd(entry.type));
+      container.appendChild(btn);
+    });
+  }
+
+  // ===== 保存データ一覧 =====
+  function renderCaseList(container, cases, callbacks) {
+    container.innerHTML = "";
+    if (cases.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "case-list-empty";
+      empty.textContent = "保存データはまだありません。";
+      container.appendChild(empty);
+      return;
+    }
+    cases.forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "case-list-row";
+
+      const info = document.createElement("div");
+      info.className = "case-list-info";
+      const name = document.createElement("div");
+      name.className = "case-list-name";
+      name.textContent = c.name;
+      const meta = document.createElement("div");
+      meta.className = "case-list-meta";
+      const dateLabel = new Date(c.updatedAt).toLocaleString("ja-JP");
+      meta.textContent = c.label ? `${c.label}｜${dateLabel}更新` : `${dateLabel}更新`;
+      info.appendChild(name);
+      info.appendChild(meta);
+      row.appendChild(info);
+
+      const actions = document.createElement("div");
+      actions.className = "case-list-actions";
+
+      const relabelBtn = document.createElement("button");
+      relabelBtn.type = "button";
+      relabelBtn.className = "tool-button-small";
+      relabelBtn.textContent = "✏️";
+      relabelBtn.title = "メモを編集";
+      relabelBtn.addEventListener("click", () => {
+        const next = window.prompt("メモを入力してください（例：研修用）", c.label || "");
+        if (next !== null) callbacks.onRelabel(c.id, next);
+      });
+      actions.appendChild(relabelBtn);
+
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "tool-button-small";
+      openBtn.textContent = "開く";
+      openBtn.addEventListener("click", () => callbacks.onOpen(c.id));
+      actions.appendChild(openBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "tool-button-small tool-button-danger";
+      deleteBtn.textContent = "🗑";
+      deleteBtn.addEventListener("click", () => {
+        if (window.confirm(`「${c.name}」を削除しますか？この操作は取り消せません。`)) {
+          callbacks.onDelete(c.id);
+        }
+      });
+      actions.appendChild(deleteBtn);
+
+      row.appendChild(actions);
+      container.appendChild(row);
+    });
+  }
+
+  document.addEventListener(
+    "pointerdown",
+    (evt) => {
+      if (!activePopup) return;
+      if (activePopup.el.contains(evt.target)) return;
+      // 図形自身のクリックは各ノードのpointerdown/upで処理されるため、ここでは閉じない
+      if (evt.target.closest && evt.target.closest(".room-node, .fixture-node, .annotation-node")) return;
+      closePopup();
+    },
+    true
+  );
+
+  Madori.forms = {
+    closePopup,
+    openRoomPopup,
+    openFixturePopup,
+    openAnnotationPopup,
+    renderPalette,
+    renderCaseList,
+  };
+})((window.Madori = window.Madori || {}));
+
+</script>
+  <script>
+// ドキュメントの保存（ファイルダウンロード）・読込（ファイル選択）・
+// 端末への自動保存（複数ケースを名前で管理）を担当する。
+// genogram_web/document_store.jsと同じ設計（caseIdごとの本体＋軽い索引の2段構成）をそのまま踏襲。
+
+(function (Madori) {
+  function normalizeDocument(doc) {
+    if (!doc.rooms) doc.rooms = [];
+    if (!doc.fixtures) doc.fixtures = [];
+    if (!doc.annotations) doc.annotations = [];
+    return doc;
+  }
+
+  function saveDocument(doc, fileName) {
+    const json = JSON.stringify(doc, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function loadDocumentFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          resolve(normalizeDocument(Madori.createDocument(data)));
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  }
+
+  // ===== 端末への自動保存（複数ケース対応）=====
+  const CASE_PREFIX = "madori_case_v1_";
+  const CASE_INDEX_KEY = "madori_case_index_v1";
+
+  function makeCaseId() {
+    return window.crypto && window.crypto.randomUUID
+      ? window.crypto.randomUUID()
+      : `case_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function loadCaseIndex() {
+    try {
+      const raw = localStorage.getItem(CASE_INDEX_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveCaseIndex(index) {
+    try {
+      localStorage.setItem(CASE_INDEX_KEY, JSON.stringify(index));
+    } catch (error) {
+      // 保存容量超過などで失敗しても操作は止めない
+    }
+  }
+
+  function autosaveCase(doc) {
+    if (!doc.caseId) doc.caseId = makeCaseId();
+    doc.updatedAt = Date.now();
+    try {
+      localStorage.setItem(CASE_PREFIX + doc.caseId, JSON.stringify(doc));
+    } catch (error) {
+      return;
+    }
+    const index = loadCaseIndex();
+    const entry = {
+      id: doc.caseId,
+      name: doc.title || "（名称未設定）",
+      label: doc.caseLabel || "",
+      updatedAt: doc.updatedAt,
+    };
+    const existingIndex = index.findIndex((e) => e.id === doc.caseId);
+    if (existingIndex >= 0) index[existingIndex] = entry;
+    else index.push(entry);
+    saveCaseIndex(index);
+  }
+
+  function updateCaseLabel(caseId, label) {
+    const doc = loadCase(caseId);
+    if (!doc) return;
+    doc.caseLabel = label;
+    autosaveCase(doc);
+  }
+
+  function loadCase(caseId) {
+    try {
+      const raw = localStorage.getItem(CASE_PREFIX + caseId);
+      return raw ? normalizeDocument(Madori.createDocument(JSON.parse(raw))) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function deleteCase(caseId) {
+    localStorage.removeItem(CASE_PREFIX + caseId);
+    saveCaseIndex(loadCaseIndex().filter((e) => e.id !== caseId));
+  }
+
+  function listCases() {
+    return loadCaseIndex().slice().sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  Madori.documentStore = {
+    saveDocument,
+    loadDocumentFromFile,
+    makeCaseId,
+    autosaveCase,
+    updateCaseLabel,
+    loadCase,
+    deleteCase,
+    listCases,
+  };
+})((window.Madori = window.Madori || {}));
+
+</script>
+  <script>
+// 画像（PNG）出力・PDF出力（ブラウザの印刷機能を利用）。
+// genogram_web/export.jsと同じ仕組み（SVGをクローン→bbox計測→canvas化 or window.print）を踏襲。
+// 表示モード切り替えが無い分シンプル。
+
+(function (Madori) {
+  // 画面操作専用で出力に含めたくない要素のセレクタ：
+  // 背景グリッド(#layer-grid)は画面表示専用の目安線で、実データの一部ではない
+  // （常時-4000〜4000の巨大な矩形を持つため、非表示にせずgetBBox()を呼ぶと
+  // 見取り図の実サイズを無視した8000x8000という巨大な範囲になり、書き出し用canvasの
+  // 生成に失敗する＝toBlob()がnullを返しcreateObjectURLが例外を投げる）。
+  // リサイズハンドル・回転ハンドル・当たり判定用の透明矩形も、印刷物には不要な
+  // 操作用UIなので同様に除外する。
+  const NON_PRINT_SELECTORS = ["#layer-grid", ".room-resize-handle", ".fixture-rotate-handle", ".fixture-hit-area"];
+
+  function withHiddenNonPrintElements(svgElement, callback) {
+    const elements = NON_PRINT_SELECTORS.flatMap((selector) => Array.from(svgElement.querySelectorAll(selector)));
+    const previousDisplay = elements.map((el) => el.style.display);
+    elements.forEach((el) => { el.style.display = "none"; });
+    try {
+      return callback();
+    } finally {
+      elements.forEach((el, i) => { el.style.display = previousDisplay[i]; });
+    }
+  }
+
+  function getContentBBox(svgElement) {
+    const bbox = withHiddenNonPrintElements(svgElement, () => svgElement.getBBox());
+    const margin = 20;
+    if (bbox.width === 0 && bbox.height === 0) {
+      // 何も配置していない状態での出力を弾く（0サイズのcanvas生成を避ける）
+      return { x: -margin, y: -margin, width: margin * 2, height: margin * 2 };
+    }
+    return {
+      x: bbox.x - margin,
+      y: bbox.y - margin,
+      width: bbox.width + margin * 2,
+      height: bbox.height + margin * 2,
+    };
+  }
+
+  // 部屋・家具の色や線はstyle.cssのクラス指定（.room-fill、.fixture-icon等）に頼っている。
+  // これは画面表示では問題ないが、SVGを単独ファイルとして書き出す（クローンして
+  // XMLSerializerで文字列化しImg化する）と、外部スタイルシートの参照が失われ、
+  // 色指定の無いSVG要素はすべて既定色の黒で塗りつぶされてしまう
+  // （実際にPNG出力が真っ黒になるバグとして発覚）。
+  // document.styleSheetsから実行時に拾う案も試したが、file://で開いた場合
+  // （このアプリの標準の使い方）は外部<link>のcssRulesへのアクセスがブラウザの
+  // セキュリティ制限でSecurityErrorになり読み取れないことが判明した。
+  // そのため、SVGの見た目に関わる部分のスタイルだけをここに直接複製して埋め込む。
+  // **style.cssの.room-*・.fixture-*・.annotation-*系クラスを変更した時は、
+  // このEXPORT_SVG_STYLEも一緒に更新すること。**（ハンドル・当たり判定用の
+  // クラスは出力前に要素ごと除去されるためここに含める必要はない）
+  const EXPORT_SVG_STYLE = `
+    .room-fill { fill: #fff8ee; stroke: none; }
+    .room-wall-line { stroke: #4a3418; stroke-width: 3; stroke-linecap: square; }
+    .room-label-bg { fill: rgba(255, 253, 249, 0.88); stroke: none; }
+    .room-label { font-size: 14px; font-weight: bold; fill: #2f3b52; }
+    .room-tatami { font-size: 11px; fill: #6b7c93; }
+    .fixture-node .fixture-icon { fill: #ffffff; stroke: #2f3b52; stroke-width: 2; color: #2f3b52; }
+    .fixture-node.fixture-door .fixture-icon,
+    .fixture-node.fixture-sliding_door .fixture-icon,
+    .fixture-node.fixture-double_door .fixture-icon,
+    .fixture-node.fixture-parent_child_door .fixture-icon,
+    .fixture-node.fixture-folding_door .fixture-icon { stroke: #4a3418; }
+    .fixture-node.fixture-stairs .fixture-icon { stroke: #4a3418; color: #4a3418; }
+    .fixture-node.fixture-step .fixture-icon,
+    .fixture-node.fixture-ramp .fixture-icon { stroke: #4d8fff; }
+    .fixture-node.fixture-handrail_v .fixture-icon,
+    .fixture-node.fixture-handrail_h .fixture-icon,
+    .fixture-node.fixture-handrail_l .fixture-icon { stroke: #e0672a; fill: #e0672a; }
+    .fixture-node.fixture-conflict .fixture-icon { stroke: #e11d48; }
+    .fixture-label { font-size: 11px; fill: #6b7c93; }
+    .fixture-mini-label { font-size: 10px; fill: #2f3b52; stroke: none; }
+    .custom-fixture-name { font-weight: bold; }
+    .annotation-bg { fill: #fff3d6; stroke: #e8c874; stroke-width: 1.5; }
+    .annotation-text { font-size: 13px; fill: #2f3b52; white-space: pre; }
+  `;
+
+  function buildExportSvg(svgElement, bbox, options) {
+    const clone = svgElement.cloneNode(true);
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", bbox.width);
+    clone.setAttribute("height", bbox.height);
+    clone.setAttribute("viewBox", `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+
+    const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    styleEl.textContent = EXPORT_SVG_STYLE;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    // 背景グリッド・リサイズ/回転ハンドル・当たり判定用の透明矩形は画面操作専用なので、
+    // 出力物には含めない
+    NON_PRINT_SELECTORS.forEach((selector) => {
+      clone.querySelectorAll(selector).forEach((el) => el.remove());
+    });
+
+    if (options && options.transparentFloor) {
+      // 部屋の床のクリーム色を消す（白基調の研修様式などに貼り付ける用途）。
+      // クラス指定(EXPORT_SVG_STYLE)より優先させるため、要素に直接style属性で上書きする
+      clone.querySelectorAll(".room-fill").forEach((el) => { el.style.fill = "none"; });
+    }
+
+    if (!(options && options.transparent)) {
+      const background = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      background.setAttribute("x", bbox.x);
+      background.setAttribute("y", bbox.y);
+      background.setAttribute("width", bbox.width);
+      background.setAttribute("height", bbox.height);
+      background.setAttribute("fill", "#fffdf9");
+      clone.insertBefore(background, clone.firstChild);
+    }
+    return clone;
+  }
+
+  function exportToPng(svgElement, fileName, options) {
+    const bbox = getContentBBox(svgElement);
+    const exportSvg = buildExportSvg(svgElement, bbox, options);
+    const svgString = new XMLSerializer().serializeToString(exportSvg);
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = bbox.width * scale;
+      canvas.height = bbox.height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, bbox.width, bbox.height);
+      URL.revokeObjectURL(url);
+
+      canvas.toBlob((blob) => {
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
+      }, "image/png");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert("画像出力に失敗しました。");
+    };
+    img.src = url;
+  }
+
+  function exportToPdf(svgElement, title, noteText, options) {
+    const bbox = getContentBBox(svgElement);
+    const exportSvg = buildExportSvg(svgElement, bbox, options);
+    exportSvg.removeAttribute("width");
+    exportSvg.removeAttribute("height");
+
+    const printArea = document.getElementById("print-area");
+    printArea.innerHTML = "";
+
+    const heading = document.createElement("h2");
+    heading.textContent = title;
+    printArea.appendChild(heading);
+
+    const todayLabel = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
+    const metaParts = [`作成日：${todayLabel}`];
+    if (options && options.creatorName) metaParts.push(`作成者：${options.creatorName}`);
+    const meta = document.createElement("p");
+    meta.className = "print-meta";
+    meta.textContent = metaParts.join("　");
+    printArea.appendChild(meta);
+
+    const orientation = (options && options.orientation) || "auto";
+    const isLandscape = orientation === "auto" ? bbox.width > bbox.height : orientation === "landscape";
+    printArea.classList.toggle("orientation-landscape", isLandscape);
+    printArea.classList.toggle("orientation-portrait", !isLandscape);
+
+    const body = document.createElement("div");
+    body.className = "print-body";
+    printArea.appendChild(body);
+
+    const diagramCol = document.createElement("div");
+    diagramCol.className = "print-diagram-col";
+    const svgWrap = document.createElement("div");
+    svgWrap.className = "print-svg-wrap";
+    svgWrap.appendChild(exportSvg);
+    diagramCol.appendChild(svgWrap);
+    body.appendChild(diagramCol);
+
+    const textCol = document.createElement("div");
+    textCol.className = "print-text-col";
+    body.appendChild(textCol);
+
+    if (options && options.includeLegend) {
+      const legendBlock = document.createElement("div");
+      legendBlock.className = "print-legend";
+      const legendHeading = document.createElement("h3");
+      legendHeading.textContent = "図記号の意味";
+      const legendList = document.createElement("ul");
+      [
+        "点＋線＝手すり（縦・横・L型）",
+        "斜線ハッチングの短冊＝段差解消",
+        "斜線ハッチングの三角＝スロープ",
+        "白い扇形＝開き戸・両開き戸・親子扉が開く範囲",
+        "2本線＋パネル＝引き戸、ジグザグ線＝折れ戸",
+        "平行な2本線＝窓、壁の途切れ＝ドア・窓の開口部",
+        "平行線の並び＋矢印＝階段（上り方向）",
+      ].forEach((text) => {
+        const li = document.createElement("li");
+        li.textContent = text;
+        legendList.appendChild(li);
+      });
+      legendBlock.appendChild(legendHeading);
+      legendBlock.appendChild(legendList);
+      textCol.appendChild(legendBlock);
+    }
+
+    if (noteText) {
+      const noteBlock = document.createElement("div");
+      noteBlock.className = "print-note";
+      const noteHeading = document.createElement("h3");
+      noteHeading.textContent = "📝 備考";
+      const noteBody = document.createElement("p");
+      noteBody.style.whiteSpace = "pre-wrap";
+      noteBody.textContent = noteText;
+      noteBlock.appendChild(noteHeading);
+      noteBlock.appendChild(noteBody);
+      textCol.appendChild(noteBlock);
+    }
+
+    let pageStyle = document.getElementById("print-page-style");
+    if (!pageStyle) {
+      pageStyle = document.createElement("style");
+      pageStyle.id = "print-page-style";
+      document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = `@page { size: ${isLandscape ? "landscape" : "portrait"}; margin: 10mm; }`;
+    printArea.style.height = isLandscape ? "188mm" : "275mm";
+
+    window.print();
+  }
+
+  Madori.exporter = { exportToPng, exportToPdf };
+})((window.Madori = window.Madori || {}));
+
+</script>
+  <script>
+// アプリ全体の組み立て：起動時の初期化とツールバー・モーダルの結線。
+// genogram_web/app.jsと同じ設計（refreshAll一箇所での自動保存・履歴記録、
+// モーダル外側クリックでの一括クローズ）を踏襲。
+
+(function (Madori) {
+  let currentDocument = null;
+  let currentFileName = null;
+
+  // ===== 元に戻す・やり直し =====
+  let undoStack = [];
+  let redoStack = [];
+  let lastSnapshot = null;
+  let isRestoringHistory = false;
+  const MAX_HISTORY = 50;
+
+  function resetHistory() {
+    undoStack = [];
+    redoStack = [];
+    lastSnapshot = currentDocument ? JSON.stringify(currentDocument) : null;
+    updateUndoRedoButtons();
+  }
+
+  function recordHistoryIfChanged() {
+    if (isRestoringHistory) return;
+    const snapshot = JSON.stringify(currentDocument);
+    if (lastSnapshot !== null && lastSnapshot !== snapshot) {
+      undoStack.push(lastSnapshot);
+      if (undoStack.length > MAX_HISTORY) undoStack.shift();
+      redoStack = [];
+    }
+    lastSnapshot = snapshot;
+  }
+
+  function restoreSnapshot(jsonText) {
+    isRestoringHistory = true;
+    currentDocument = Madori.createDocument(JSON.parse(jsonText));
+    document.getElementById("note-textarea").value = currentDocument.note || "";
+    document.getElementById("doc-title-input").value = currentDocument.title || "";
+    refreshAll();
+    lastSnapshot = jsonText;
+    isRestoringHistory = false;
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    if (undoStack.length === 0) return;
+    redoStack.push(JSON.stringify(currentDocument));
+    restoreSnapshot(undoStack.pop());
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(JSON.stringify(currentDocument));
+    restoreSnapshot(redoStack.pop());
+  }
+
+  function updateUndoRedoButtons() {
+    document.getElementById("btn-undo").disabled = undoStack.length === 0;
+    document.getElementById("btn-redo").disabled = redoStack.length === 0;
+  }
+
+  function buildFreshDocument(info) {
+    return Madori.createDocument({
+      caseId: Madori.documentStore.makeCaseId(),
+      title: info.title,
+      caseLabel: info.caseLabel || "",
+    });
+  }
+
+  function openNewCaseModal(onConfirm, onCancel) {
+    const modal = document.getElementById("new-case-modal");
+    const titleInput = document.getElementById("new-case-title");
+    const labelInput = document.getElementById("new-case-label");
+    const confirmButton = document.getElementById("new-case-confirm");
+    const cancelButton = document.getElementById("new-case-cancel");
+
+    titleInput.value = "";
+    labelInput.value = "";
+    modal.classList.remove("hidden");
+    titleInput.focus();
+
+    function cleanup() {
+      modal.classList.add("hidden");
+      confirmButton.removeEventListener("click", handleConfirm);
+      cancelButton.removeEventListener("click", handleCancel);
+    }
+    function handleConfirm() {
+      const title = titleInput.value.trim();
+      if (!title) {
+        titleInput.focus();
+        return;
+      }
+      cleanup();
+      onConfirm({ title, caseLabel: labelInput.value.trim() });
+    }
+    function handleCancel() {
+      cleanup();
+      if (onCancel) onCancel();
+    }
+    confirmButton.addEventListener("click", handleConfirm);
+    cancelButton.addEventListener("click", handleCancel);
+  }
+
+  function loadIntoApp(doc) {
+    currentDocument = doc;
+    document.getElementById("note-textarea").value = doc.note || "";
+    document.getElementById("doc-title-input").value = doc.title || "";
+    resetHistory();
+    refreshAll();
+    Madori.canvas.fitToView(currentDocument);
+  }
+
+  function refreshAll() {
+    recordHistoryIfChanged();
+    Madori.canvas.renderDocument(currentDocument);
+    Madori.documentStore.autosaveCase(currentDocument);
+    renderCaseList();
+    updateUndoRedoButtons();
+    showSavedToast();
+  }
+
+  let saveToastHideTimer = null;
+  function showSavedToast() {
+    const toast = document.getElementById("save-toast");
+    if (!toast) return;
+    toast.classList.remove("hidden");
+    requestAnimationFrame(() => toast.classList.add("visible"));
+    clearTimeout(saveToastHideTimer);
+    saveToastHideTimer = setTimeout(() => {
+      toast.classList.remove("visible");
+      setTimeout(() => toast.classList.add("hidden"), 250);
+    }, 1200);
+  }
+
+  function defaultFileBaseName() {
+    return currentDocument.title || "住環境見取り図";
+  }
+
+  function setupModalOutsideClickClose() {
+    document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+      overlay.addEventListener("click", (evt) => {
+        if (evt.target === overlay) overlay.classList.add("hidden");
+      });
+    });
+  }
+
+  // ===== 部屋・家具・テキストの追加/編集/削除 =====
+  function addRoomAtCenter() {
+    const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
+    const center = Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const room = Madori.createRoom({ x: Math.round(center.x - 70), y: Math.round(center.y - 50) });
+    currentDocument.rooms.push(room);
+    refreshAll();
+  }
+
+  function addTextAtCenter() {
+    const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
+    const center = Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const annotation = Madori.createAnnotation({ x: Math.round(center.x), y: Math.round(center.y) });
+    currentDocument.annotations.push(annotation);
+    refreshAll();
+  }
+
+  function computeViewCenterWorld() {
+    const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
+    return Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
+  function placeFixture(fixture) {
+    currentDocument.fixtures.push(fixture);
+    refreshAll();
+    if (!Madori.canvas.isWorldPointVisible(fixture.x, fixture.y, 40)) {
+      Madori.canvas.fitToView(currentDocument);
+    }
+  }
+
+  function addFixtureAtCenter(type) {
+    // 「自由入力」は形と名前を先に聞く必要があるため、他の種類のような即時配置ではなく
+    // 専用モーダルを開く
+    if (type === Madori.FixtureType.CUSTOM) {
+      openCustomFixtureModal();
+      return;
+    }
+    const center = computeViewCenterWorld();
+    const fixture = Madori.createFixture(type, { x: Math.round(center.x), y: Math.round(center.y) });
+    placeFixture(fixture);
+  }
+
+  function openCustomFixtureModal() {
+    const modal = document.getElementById("custom-fixture-modal");
+    const nameInput = document.getElementById("custom-fixture-name");
+    nameInput.value = "";
+    document.querySelector('input[name="custom-fixture-shape"][value="rect"]').checked = true;
+    modal.classList.remove("hidden");
+    nameInput.focus();
+
+    function cleanup() {
+      modal.classList.add("hidden");
+      confirmBtn.removeEventListener("click", handleConfirm);
+      cancelBtn.removeEventListener("click", handleCancel);
+    }
+    function handleConfirm() {
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.focus();
+        return; // 名前は必須（アイコンの中に表示する主役の情報なので空のままは進ませない）
+      }
+      const shape = document.querySelector('input[name="custom-fixture-shape"]:checked').value;
+      cleanup();
+      const center = computeViewCenterWorld();
+      const fixture = Madori.createFixture(Madori.FixtureType.CUSTOM, {
+        x: Math.round(center.x),
+        y: Math.round(center.y),
+        customShape: shape,
+        label: name,
+      });
+      placeFixture(fixture);
+    }
+    function handleCancel() {
+      cleanup();
+    }
+    const confirmBtn = document.getElementById("custom-fixture-confirm");
+    const cancelBtn = document.getElementById("custom-fixture-cancel");
+    confirmBtn.addEventListener("click", handleConfirm);
+    cancelBtn.addEventListener("click", handleCancel);
+  }
+
+  function setupCanvasHandlers() {
+    Madori.canvas.setRoomClickHandler((room, clientX, clientY) => {
+      Madori.forms.openRoomPopup(room, clientX, clientY, {
+        onChange: (patch) => {
+          Object.assign(room, patch);
+          Madori.canvas.renderDocument(currentDocument);
+          Madori.documentStore.autosaveCase(currentDocument);
+        },
+        // 入力欄からフォーカスが外れた時に1回だけ呼ばれる。入力中の1文字ごとではなく
+        // 編集ひとまとまりを1つのUndoステップとして記録したいのでここでrefreshAllを呼ぶ
+        // （refreshAll内のrecordHistoryIfChangedが、フォーカスが当たった時点の状態との
+        // 差分をまとめて1件だけ履歴に積む）
+        onCommit: () => { refreshAll(); },
+        onDuplicate: () => {
+          currentDocument.rooms.push(Madori.duplicateRoom(room));
+          refreshAll();
+        },
+        onDelete: () => {
+          currentDocument.rooms = currentDocument.rooms.filter((r) => r.id !== room.id);
+          // この部屋の壁に付いていたドア・窓は、壁の無い浮いた状態にしない方が分かりやすいため
+          // 自由配置に戻す（位置・向きはそのまま、壁への追従だけ解除する）
+          currentDocument.fixtures.forEach((f) => {
+            if (f.wall && f.wall.roomId === room.id) f.wall = null;
+          });
+          refreshAll();
+        },
+      });
+    });
+
+    Madori.canvas.setFixtureClickHandler((fixture, clientX, clientY) => {
+      Madori.forms.openFixturePopup(fixture, clientX, clientY, {
+        onRotate: () => {
+          // 壁にフィット中の場合、回転ボタンを押した時点で壁から外し自由回転にする
+          // （フィットしたままだと次の再描画で壁の向きに回転が上書きされてしまうため）
+          fixture.wall = null;
+          fixture.rotation = (fixture.rotation + 90) % 360;
+          refreshAll();
+        },
+        onFlip: () => {
+          fixture.flipped = !fixture.flipped;
+          refreshAll();
+        },
+        onLabelChange: (label) => {
+          fixture.label = label;
+          Madori.canvas.renderDocument(currentDocument);
+          Madori.documentStore.autosaveCase(currentDocument);
+        },
+        onCommit: () => { refreshAll(); },
+        onDuplicate: () => {
+          currentDocument.fixtures.push(Madori.duplicateFixture(fixture));
+          refreshAll();
+        },
+        onDelete: () => {
+          currentDocument.fixtures = currentDocument.fixtures.filter((f) => f.id !== fixture.id);
+          refreshAll();
+        },
+      });
+    });
+
+    Madori.canvas.setAnnotationClickHandler((annotation, clientX, clientY) => {
+      Madori.forms.openAnnotationPopup(annotation, clientX, clientY, {
+        onTextChange: (text) => {
+          annotation.text = text;
+          Madori.canvas.renderDocument(currentDocument);
+          Madori.documentStore.autosaveCase(currentDocument);
+        },
+        onCommit: () => { refreshAll(); },
+        onDelete: () => {
+          currentDocument.annotations = currentDocument.annotations.filter((a) => a.id !== annotation.id);
+          refreshAll();
+        },
+      });
+    });
+
+    // ドラッグ（移動・リサイズ・回転ハンドル操作）の終了時にもrefreshAllを呼び、
+    // Undo/Redoの対象にする（以前は自動保存だけで、ドラッグ操作はUndoで戻せなかった）
+    Madori.canvas.setDragEndHandler(() => {
+      refreshAll();
+    });
+
+    Madori.canvas.setZoomChangeHandler((percent) => {
+      document.getElementById("zoom-level").textContent = `${percent}%`;
+    });
+  }
+
+  function setupToolbar() {
+    document.getElementById("btn-new").addEventListener("click", () => {
+      openNewCaseModal((info) => {
+        loadIntoApp(buildFreshDocument(info));
+        currentFileName = null;
+      });
+    });
+
+    document.getElementById("btn-open").addEventListener("click", () => {
+      document.getElementById("file-input").click();
+    });
+
+    document.getElementById("file-input").addEventListener("change", (evt) => {
+      const file = evt.target.files[0];
+      if (!file) return;
+      Madori.documentStore
+        .loadDocumentFromFile(file)
+        .then((doc) => {
+          if (!doc.caseId) doc.caseId = Madori.documentStore.makeCaseId();
+          loadIntoApp(doc);
+          currentFileName = file.name;
+        })
+        .catch(() => alert("ファイルを読み込めませんでした。"))
+        .finally(() => {
+          evt.target.value = "";
+        });
+    });
+
+    document.getElementById("btn-save-file").addEventListener("click", () => {
+      const suggested = currentFileName || `${defaultFileBaseName()}_見取り図.json`;
+      const fileName = window.prompt("保存するファイル名を入力してください", suggested);
+      if (!fileName) return;
+      currentFileName = fileName;
+      Madori.documentStore.saveDocument(currentDocument, fileName);
+    });
+
+    document.getElementById("btn-add-room").addEventListener("click", addRoomAtCenter);
+    document.getElementById("btn-add-text").addEventListener("click", addTextAtCenter);
+    document.getElementById("btn-fit-view").addEventListener("click", () => Madori.canvas.fitToView(currentDocument));
+    document.getElementById("btn-zoom-in").addEventListener("click", () => Madori.canvas.zoomBy(1.2));
+    document.getElementById("btn-zoom-out").addEventListener("click", () => Madori.canvas.zoomBy(1 / 1.2));
+    document.getElementById("btn-undo").addEventListener("click", undo);
+    document.getElementById("btn-redo").addEventListener("click", redo);
+
+    document.getElementById("doc-title-input").addEventListener("input", (evt) => {
+      currentDocument.title = evt.target.value;
+      Madori.documentStore.autosaveCase(currentDocument);
+      renderCaseList();
+    });
+    document.getElementById("note-textarea").addEventListener("input", (evt) => {
+      currentDocument.note = evt.target.value;
+      Madori.documentStore.autosaveCase(currentDocument);
+    });
+
+    document.getElementById("btn-export-png").addEventListener("click", () => openExportOptions("png"));
+    document.getElementById("btn-export-pdf").addEventListener("click", () => openExportOptions("pdf"));
+
+    document.getElementById("btn-usage-guide").addEventListener("click", () => {
+      document.getElementById("usage-guide-modal").classList.remove("hidden");
+    });
+    document.getElementById("usage-guide-close").addEventListener("click", () => {
+      document.getElementById("usage-guide-modal").classList.add("hidden");
+    });
+
+    document.getElementById("btn-case-list").addEventListener("click", () => {
+      renderCaseList();
+      document.getElementById("case-list-modal").classList.remove("hidden");
+    });
+    document.getElementById("case-list-close").addEventListener("click", () => {
+      document.getElementById("case-list-modal").classList.add("hidden");
+    });
+  }
+
+  function renderCaseList() {
+    const container = document.getElementById("case-list-container");
+    Madori.forms.renderCaseList(container, Madori.documentStore.listCases(), {
+      onOpen: (caseId) => {
+        const doc = Madori.documentStore.loadCase(caseId);
+        if (doc) {
+          loadIntoApp(doc);
+          currentFileName = null;
+        }
+        document.getElementById("case-list-modal").classList.add("hidden");
+      },
+      onDelete: (caseId) => {
+        Madori.documentStore.deleteCase(caseId);
+        if (currentDocument && currentDocument.caseId === caseId) {
+          startBrandNewCase();
+        }
+        renderCaseList();
+      },
+      onRelabel: (caseId, label) => {
+        Madori.documentStore.updateCaseLabel(caseId, label);
+        renderCaseList();
+      },
+    });
+  }
+
+  function startBrandNewCase() {
+    openNewCaseModal(
+      (info) => {
+        loadIntoApp(buildFreshDocument(info));
+        currentFileName = null;
+      },
+      () => {
+        loadIntoApp(buildFreshDocument({ title: "無題の見取り図" }));
+      }
+    );
+  }
+
+  // ===== 出力オプション =====
+  let pendingExportType = null;
+
+  function openExportOptions(type) {
+    pendingExportType = type;
+    document.getElementById("export-options-title").textContent = type === "png" ? "🖼 画像出力" : "📄 PDF出力";
+    document.getElementById("export-pdf-only-options").classList.toggle("hidden", type !== "pdf");
+    document.getElementById("export-creator-name").value = currentDocument.creatorName || "";
+    document.getElementById("export-transparent").checked = false;
+    document.getElementById("export-transparent-floor").checked = false;
+    document.getElementById("export-orientation-auto").checked = true;
+    document.getElementById("export-options-modal").classList.remove("hidden");
+  }
+
+  function setupExportOptionsModal() {
+    document.getElementById("export-options-cancel").addEventListener("click", () => {
+      document.getElementById("export-options-modal").classList.add("hidden");
+    });
+    document.getElementById("export-options-close").addEventListener("click", () => {
+      document.getElementById("export-options-modal").classList.add("hidden");
+    });
+
+    document.getElementById("export-options-confirm").addEventListener("click", () => {
+      const options = {
+        transparent: document.getElementById("export-transparent").checked,
+        transparentFloor: document.getElementById("export-transparent-floor").checked,
+      };
+      if (pendingExportType === "png") {
+        Madori.exporter.exportToPng(Madori.canvas.getSvgElement(), `${defaultFileBaseName()}_見取り図.png`, options);
+      } else if (pendingExportType === "pdf") {
+        currentDocument.creatorName = document.getElementById("export-creator-name").value.trim();
+        Madori.documentStore.autosaveCase(currentDocument);
+        options.creatorName = currentDocument.creatorName;
+        options.includeLegend = document.getElementById("export-include-legend").checked;
+        options.orientation = document.querySelector('input[name="export-orientation"]:checked').value;
+        Madori.exporter.exportToPdf(
+          Madori.canvas.getSvgElement(),
+          `${defaultFileBaseName()} 住環境見取り図`,
+          currentDocument.note,
+          options
+        );
+      }
+      document.getElementById("export-options-modal").classList.add("hidden");
+    });
+  }
+
+  function setupKeyboardShortcuts() {
+    window.addEventListener("keydown", (evt) => {
+      const isMeta = evt.ctrlKey || evt.metaKey;
+      if (!isMeta) return;
+      if (evt.key.toLowerCase() === "z" && !evt.shiftKey) {
+        evt.preventDefault();
+        undo();
+      } else if (evt.key.toLowerCase() === "z" && evt.shiftKey) {
+        evt.preventDefault();
+        redo();
+      }
+    });
+  }
+
+  function init() {
+    Madori.canvas.init(document.getElementById("canvas"));
+    Madori.forms.renderPalette(document.getElementById("fixture-palette"), addFixtureAtCenter);
+    setupCanvasHandlers();
+    setupToolbar();
+    setupExportOptionsModal();
+    setupModalOutsideClickClose();
+    setupKeyboardShortcuts();
+
+    let restored = null;
+    const cases = Madori.documentStore.listCases();
+    if (cases.length > 0) {
+      restored = Madori.documentStore.loadCase(cases[0].id);
+    }
+    if (restored) {
+      loadIntoApp(restored);
+    } else {
+      startBrandNewCase();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})((window.Madori = window.Madori || {}));
+
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>住環境見取り図アプリ</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-top">
+      <h1>🏠 住環境見取り図アプリ</h1>
+      <a class="app-credit" href="https://x.com/kat_t0o" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.6l-5.2-6.8L5 22H1.9l8.1-9.3L1 2h6.7l4.7 6.2L18.9 2zM16.6 20h1.9L7.5 4H5.5L16.6 20z"/></svg>
+        作成：ケアマネカトゥ（@kat_t0o）
+      </a>
+    </div>
+    <nav class="toolbar">
+      <button id="btn-new" class="tool-button" type="button">🆕 はじめから作成</button>
+      <button id="btn-case-list" class="tool-button" type="button">📁 保存データ一覧</button>
+      <button id="btn-save-file" class="tool-button" type="button">💾 データ保存</button>
+      <button id="btn-open" class="tool-button" type="button">📂 手動でデータを開く</button>
+      <input type="file" id="file-input" accept="application/json" class="hidden" />
+      <button id="btn-export-png" class="tool-button" type="button">🖼 画像出力</button>
+      <button id="btn-export-pdf" class="tool-button" type="button">📄 PDF出力</button>
+      <button id="btn-usage-guide" class="tool-button" type="button">❓ 使い方ガイド</button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <aside class="side-panel">
+      <h2>📋 基本情報</h2>
+      <label class="field-label">対象者名・案件名
+        <input type="text" id="doc-title-input" placeholder="例：〇〇様邸" />
+      </label>
+      <label class="field-label">備考
+        <textarea id="note-textarea" rows="3" placeholder="動線や気づいた点のメモなど"></textarea>
+      </label>
+
+      <h2>🪑 家具・設備を追加</h2>
+      <p class="side-panel-hint">クリックすると図の中央に追加されます。追加後はドラッグで移動、クリックで編集できます。</p>
+      <div id="fixture-palette" class="fixture-palette"></div>
+    </aside>
+
+    <main class="canvas-area">
+      <svg id="canvas" class="canvas-svg"></svg>
+      <div id="save-toast" class="save-toast hidden">💾 保存しました</div>
+
+      <div class="canvas-overlay-toolbars">
+        <div class="canvas-toolbar">
+          <button id="btn-add-room" class="tool-button add-button" type="button">➕ 部屋を追加</button>
+          <button id="btn-add-text" class="tool-button add-button" type="button">➕ テキストを追加</button>
+          <button id="btn-fit-view" class="tool-button" type="button">🔍 全体表示</button>
+          <button id="btn-undo" class="tool-button" type="button" disabled>↩️ 元に戻す</button>
+          <button id="btn-redo" class="tool-button" type="button" disabled>↪️ やり直す</button>
+        </div>
+      </div>
+
+      <div class="zoom-control">
+        <button id="btn-zoom-out" class="zoom-btn" type="button">－</button>
+        <span id="zoom-level" class="zoom-percent">100%</span>
+        <button id="btn-zoom-in" class="zoom-btn" type="button">＋</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- 新規作成モーダル -->
+  <div id="new-case-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>🆕 はじめから作成</h2>
+      <label class="field-label">対象者名・案件名（必須）
+        <input type="text" id="new-case-title" placeholder="例：〇〇様邸／主任ケアマネ更新研修用" />
+      </label>
+      <label class="field-label">メモ（任意）
+        <input type="text" id="new-case-label" placeholder="例：研修提出用" />
+      </label>
+      <div class="modal-actions">
+        <button id="new-case-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="new-case-confirm" type="button" class="tool-button tool-button-primary">✨ この内容で始める</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自由入力の家具を追加するモーダル -->
+  <div id="custom-fixture-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>✏️ 自由入力の家具を追加</h2>
+      <p class="side-panel-hint">家具・設備の一覧に無いもの（例：押入、仏壇、エアコン、PC台など）を、形と名前を決めて配置できます。</p>
+      <label class="field-label">名前（必須）
+        <input type="text" id="custom-fixture-name" placeholder="例：押入" />
+      </label>
+      <p class="field-label">形</p>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="rect" checked /> 四角</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="circle" /> 丸</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="triangle" /> 三角</label>
+      <label class="radio-row"><input type="radio" name="custom-fixture-shape" value="diamond" /> ひし形</label>
+      <div class="modal-actions">
+        <button id="custom-fixture-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="custom-fixture-confirm" type="button" class="tool-button tool-button-primary">✨ この内容で追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存データ一覧モーダル -->
+  <div id="case-list-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2>📁 保存データ一覧</h2>
+        <button id="case-list-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <div id="case-list-container"></div>
+    </div>
+  </div>
+
+  <!-- 出力オプションモーダル -->
+  <div id="export-options-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2 id="export-options-title">出力</h2>
+        <button id="export-options-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="export-transparent" />
+        透明背景で出力する
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="export-transparent-floor" />
+        部屋の床の色も透明にする（白基調の書式に貼る時など）
+      </label>
+      <div id="export-pdf-only-options">
+        <label class="field-label">作成者名（任意）
+          <input type="text" id="export-creator-name" placeholder="ここに入力してください" />
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="export-include-legend" checked />
+          図記号の意味（凡例）を入れる
+        </label>
+        <p class="field-label">用紙の向き</p>
+        <label class="radio-row"><input type="radio" name="export-orientation" id="export-orientation-auto" value="auto" checked /> 自動（図の形に合わせる）</label>
+        <label class="radio-row"><input type="radio" name="export-orientation" value="portrait" /> 縦</label>
+        <label class="radio-row"><input type="radio" name="export-orientation" value="landscape" /> 横</label>
+      </div>
+      <div class="modal-actions">
+        <button id="export-options-cancel" type="button" class="tool-button">キャンセル</button>
+        <button id="export-options-confirm" type="button" class="tool-button tool-button-primary">⬇ ダウンロードする</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使い方ガイドモーダル -->
+  <div id="usage-guide-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header-row">
+        <h2>📘 使い方ガイド</h2>
+        <button id="usage-guide-close" type="button" class="popup-close-x">✕</button>
+      </div>
+      <ol class="usage-guide-list">
+        <li>「🆕 はじめから作成」で対象者名・案件名を入力して始めます。</li>
+        <li>「➕ 部屋を追加」で部屋（四角）を配置。ドラッグで移動、四隅どこからでもドラッグで大きさを変えられます（つかんだ角の反対側は動きません）。部屋同士を近づけると自動的に辺が揃います（吸着）。</li>
+        <li>部屋をクリックすると、名前・広さのメモの編集、複製、削除ができます。</li>
+        <li>左側の「🪑 家具・設備を追加」から開き戸・引き戸・両開き戸・親子扉・折れ戸・窓・手すり・段差・スロープ・階段・ベッドなどをクリックして配置します。一覧に無いもの（押入・仏壇など）は「✏️ 自由入力」から形と名前を決めて追加できます。</li>
+        <li>ドアや窓が無く、壁がただ途切れているだけの出入口（勝手口など）は「開口部(勝手口・扉なし)」を使うと、記号を何も描かずに壁の枠線だけ途切れさせられます。</li>
+        <li>ドア・窓を部屋の壁の近くまでドラッグすると、壁に自動的に開口部ができて向きも合わせてフィットします（壁から離すと解除されます）。</li>
+        <li>家具・階段は四隅のハンドルで大きさを変えられます。壁にフィットしていない家具は上に出る丸いハンドルをドラッグすると自由な角度に回せます（90度ボタンも使えます）。</li>
+        <li>家具をクリックすると、回転・注釈（高さ等）の編集・複製・削除ができます。部屋を動かすと、中に置いた家具も一緒に付いてきます。</li>
+        <li>「➕ テキストを追加」で自由なメモを図の上に置けます。</li>
+        <li>画面のドラッグでパン、ホイールでズームできます。「🔍 全体表示」で全体が見える位置に戻ります。</li>
+        <li>操作は自動的に端末へ保存されます。「📁 保存データ一覧」から過去のケースを開いたり、メモを付けたりできます。</li>
+        <li>「🖼 画像出力」「📄 PDF出力」で完成した見取り図をダウンロードできます。出力画面では「透明背景」「部屋の床の色も透明にする」（白基調の書式に貼り付ける時など）も選べます。</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- PDF出力専用の印刷エリア（画面には表示せず、印刷/PDF保存時だけ使う） -->
+  <div id="print-area"></div>
+
+  <script src="models.js"></script>
+  <script src="canvas.js"></script>
+  <script src="forms.js"></script>
+  <script src="document_store.js"></script>
+  <script src="export.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+/* ポップで視認性の良いデザイン（丸ゴシック・パステル・角丸）。
+   genogram_web/style.cssと同じデザイン言語（配色トークン・角丸ボタン等）を踏襲しつつ、
+   暖色寄りの配色にしてジェノグラムアプリと見分けやすくしている。 */
+
+:root {
+  --color-bg: #fbf6ee;
+  --color-header-start: #ffb37a;
+  --color-header-end: #ff8a8a;
+  --color-primary: #ff8a4c;
+  --color-primary-dark: #e0672a;
+  --color-secondary: #4ecdc4;
+  --color-secondary-dark: #3bb3aa;
+  --color-card: #ffffff;
+  --color-border: #f0ddc4;
+  --color-text: #2f3b52;
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Hiragino Maru Gothic ProN", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-header {
+  background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
+  padding: 8px 16px;
+  box-shadow: var(--shadow-soft);
+  flex: 0 0 auto;
+}
+
+.app-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.app-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 5px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-credit:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.app-credit svg {
+  fill: currentColor;
+}
+
+.tool-button {
+  border: none;
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.tool-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-soft);
+}
+
+.tool-button-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.tool-button-small {
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #f8ede0;
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tool-button-small:hover {
+  background: #f0ddc4;
+}
+
+.tool-button-danger {
+  color: #c0392b;
+}
+
+.app-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.side-panel {
+  width: 300px;
+  flex: 0 0 auto;
+  background: var(--color-card);
+  border-right: 2px solid var(--color-border);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.side-panel h2 {
+  font-size: 14px;
+  margin: 18px 0 8px;
+  color: var(--color-primary-dark);
+}
+
+.side-panel h2:first-child {
+  margin-top: 0;
+}
+
+.side-panel-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #6b7c93;
+  line-height: 1.5;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.field-label input,
+.field-label textarea,
+.modal-box input,
+.modal-box select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fffdf9;
+  resize: vertical;
+}
+
+.checkbox-row,
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.checkbox-row input,
+.radio-row input {
+  width: auto;
+  margin: 0;
+}
+
+.fixture-palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.palette-button {
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  padding: 8px 6px;
+  background: #fffdf9;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.palette-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  background: #fff3e6;
+}
+
+.canvas-area {
+  flex: 1 1 auto;
+  position: relative;
+  min-width: 0;
+}
+
+/* 部屋・テキスト追加や元に戻す等、キャンバス操作系のボタンを作業フィールドの
+   左上に浮かせて表示する（ジェノグラムアプリと同じ配置。ヘッダーは書類全体の
+   操作だけに絞り、キャンバス固有の操作は作業フィールド側にまとめる） */
+.canvas-overlay-toolbars {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.canvas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.canvas-toolbar .add-button {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.zoom-control {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 4px 6px;
+  box-shadow: var(--shadow-soft);
+}
+
+.zoom-btn {
+  border: none;
+  border-radius: 999px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-card);
+  color: var(--color-primary-dark);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.zoom-percent {
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 38px;
+  text-align: center;
+}
+
+.canvas-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #fffdf9;
+  touch-action: none;
+}
+
+/* ===== 部屋 ===== */
+.room-fill {
+  fill: #fff8ee;
+  stroke: none;
+  pointer-events: all; /* 部屋の内側をクリックしてもドラッグ開始できるように */
+}
+
+.room-wall-line {
+  stroke: #4a3418;
+  stroke-width: 3;
+  stroke-linecap: square;
+}
+
+.room-label-bg {
+  fill: rgba(255, 253, 249, 0.88);
+  stroke: none;
+  pointer-events: none;
+}
+
+.room-label {
+  font-size: 14px;
+  font-weight: bold;
+  fill: var(--color-text);
+  pointer-events: none;
+}
+
+.room-tatami {
+  font-size: 11px;
+  fill: #6b7c93;
+  pointer-events: none;
+}
+
+.room-resize-handle {
+  fill: var(--color-primary);
+  opacity: 0.75;
+  cursor: nwse-resize;
+}
+
+.rotate-handle-line {
+  stroke: var(--color-secondary-dark);
+  stroke-width: 1.5;
+  stroke-dasharray: 2, 2;
+}
+
+.rotate-handle-knob {
+  fill: var(--color-secondary);
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+
+.rotate-handle-knob:active {
+  cursor: grabbing;
+}
+
+/* ===== 家具・設備アイコン ===== */
+.fixture-hit-area {
+  fill: transparent; /* fill:noneだとクリックを拾えないため、透明色を明示して当たり判定を持たせる */
+  stroke: none;
+}
+
+.fixture-node .fixture-icon {
+  fill: #ffffff;
+  stroke: #2f3b52;
+  stroke-width: 2;
+  color: #2f3b52; /* currentColorを使う矢印などに反映 */
+}
+
+.fixture-node.fixture-door .fixture-icon,
+.fixture-node.fixture-sliding_door .fixture-icon,
+.fixture-node.fixture-double_door .fixture-icon,
+.fixture-node.fixture-parent_child_door .fixture-icon,
+.fixture-node.fixture-folding_door .fixture-icon {
+  stroke: #4a3418;
+}
+
+.fixture-node.fixture-stairs .fixture-icon {
+  stroke: #4a3418;
+  color: #4a3418;
+}
+
+.fixture-node.fixture-step .fixture-icon,
+.fixture-node.fixture-ramp .fixture-icon {
+  stroke: #4d8fff;
+}
+
+.fixture-node.fixture-handrail_v .fixture-icon,
+.fixture-node.fixture-handrail_h .fixture-icon,
+.fixture-node.fixture-handrail_l .fixture-icon {
+  stroke: #e0672a;
+  fill: #e0672a;
+}
+
+/* 同じ壁で開口部が重なっているドア・窓への警告表示。
+   種類ごとの色指定と同じ詳細度なので、あとに書くことで確実に上書きする。 */
+.fixture-node.fixture-conflict .fixture-icon {
+  stroke: #e11d48;
+}
+
+.fixture-node.fixture-conflict .fixture-hit-area {
+  fill: rgba(225, 29, 72, 0.14);
+}
+
+.fixture-label {
+  font-size: 11px;
+  fill: #6b7c93;
+  pointer-events: none;
+}
+
+.fixture-mini-label {
+  font-size: 10px;
+  fill: #2f3b52;
+  stroke: none;
+}
+
+.custom-fixture-name {
+  font-weight: bold;
+}
+
+/* ===== テキスト注釈 ===== */
+.annotation-bg {
+  fill: #fff3d6;
+  stroke: #e8c874;
+  stroke-width: 1.5;
+}
+
+.annotation-text {
+  font-size: 13px;
+  fill: var(--color-text);
+  pointer-events: none;
+  white-space: pre;
+}
+
+/* ===== ポップアップ（部屋・家具・テキストのその場編集） ===== */
+.edit-popup {
+  position: fixed;
+  background: var(--color-card);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 14px;
+  width: 240px;
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.edit-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.popup-hint-text {
+  font-size: 11px;
+  color: #6b7c93;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.edit-popup label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-text);
+}
+
+.edit-popup input,
+.edit-popup textarea {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 8px;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fffdf9;
+  resize: vertical;
+}
+
+.popup-action-button,
+.popup-delete-button {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.popup-action-button {
+  background: #eaf1fb;
+  color: var(--color-primary-dark);
+}
+
+.popup-delete-button {
+  background: #ffe3e0;
+  color: #c0392b;
+}
+
+.popup-close-x {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.popup-close-x:hover {
+  background: #f0ddc4;
+}
+
+/* ===== モーダル ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 40, 20, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: var(--color-card);
+  border-radius: 18px;
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.modal-box h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.modal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.usage-guide-list {
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+/* ===== 保存データ一覧 ===== */
+.case-list-empty {
+  font-size: 13px;
+  color: #6b7c93;
+}
+
+.case-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  background: #fffdf9;
+  margin-bottom: 8px;
+}
+
+.case-list-name {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.case-list-meta {
+  font-size: 11px;
+  color: #6b7c93;
+}
+
+.case-list-actions {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* ===== 保存トースト ===== */
+.save-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #2f3b52;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: bold;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.save-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.save-toast.hidden {
+  display: none;
+}
+
+/* ===== PDF印刷エリア ===== */
+#print-area {
+  display: none;
+}
+
+@media print {
+  body > *:not(#print-area) {
+    display: none !important;
+  }
+  #print-area {
+    display: flex !important;
+    flex-direction: column;
+    font-family: -apple-system, "Hiragino Maru Gothic ProN", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  }
+  #print-area h2 {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #2f3b52;
+  }
+  #print-area .print-meta {
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #6b7c93;
+  }
+  #print-area .print-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #print-area.orientation-landscape .print-body {
+    flex-direction: row;
+    gap: 14px;
+  }
+  #print-area .print-diagram-col {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+  }
+  #print-area .print-text-col {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #print-area.orientation-landscape .print-text-col {
+    flex: 0 0 78mm;
+    min-height: 0;
+    overflow: hidden;
+    border-left: 1px solid #d3e3f0;
+    padding-left: 12px;
+  }
+  #print-area .print-legend {
+    flex: 0 0 auto;
+  }
+  #print-area.orientation-portrait .print-legend {
+    padding-top: 8px;
+    border-top: 1px solid #d3e3f0;
+  }
+  #print-area .print-legend h3 {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: #e0672a;
+  }
+  #print-area .print-legend ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #4a5a72;
+  }
+  #print-area .print-svg-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+  }
+  #print-area svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #print-area .print-note {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  #print-area.orientation-portrait .print-note {
+    flex: 0 0 auto;
+    padding-top: 10px;
+    border-top: 2px solid #d3e3f0;
+  }
+  #print-area .print-note h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #e0672a;
+  }
+  #print-area .print-note p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #2f3b52;
+  }
+}
