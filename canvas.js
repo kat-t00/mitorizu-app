@@ -357,13 +357,45 @@
     };
   }
 
-  // 部屋に取り付いている全てのドア・窓の開口部一覧を辺ごとにまとめる
+  // 部屋に取り付いている全てのドア・窓の開口部一覧を辺ごとにまとめる。
+  // 加えて、別の部屋を密着させて共有した壁については、相手側に付いている開口部も
+  // この部屋の壁描画に反映する（例：部屋Aに開口部を付けた状態で無関係な部屋Bを
+  // ぴったりくっつけると、Bの無傷な壁がAの開口部を視覚的に塞いでしまっていた不具合の対策。
+  // 片方にしか開口部が無くても、両方の壁描画で「開いている」ように見せる）
+  const ADJACENT_WALL_EPS = 0.5;
+  const OPPOSITE_SIDE = { top: "bottom", bottom: "top", left: "right", right: "left" };
   function collectWallOpenings(room) {
     const openings = { top: [], right: [], bottom: [], left: [] };
     currentDocument.fixtures.forEach((f) => {
       if (f.wall && f.wall.roomId === room.id) {
         openings[f.wall.side].push({ start: f.wall.offset - f.width / 2, end: f.wall.offset + f.width / 2, fixtureId: f.id });
       }
+    });
+    WALL_SIDES.forEach((side) => {
+      const axisIsX = side === "top" || side === "bottom";
+      const myFixed = axisIsX ? room.y + (side === "bottom" ? room.height : 0) : room.x + (side === "right" ? room.width : 0);
+      const myAlongOrigin = axisIsX ? room.x : room.y;
+      const myLength = axisIsX ? room.width : room.height;
+      const otherSide = OPPOSITE_SIDE[side];
+      currentDocument.rooms.forEach((other) => {
+        if (other.id === room.id) return;
+        const otherFixed = axisIsX
+          ? other.y + (otherSide === "bottom" ? other.height : 0)
+          : other.x + (otherSide === "right" ? other.width : 0);
+        if (Math.abs(otherFixed - myFixed) > ADJACENT_WALL_EPS) return;
+        const otherAlongOrigin = axisIsX ? other.x : other.y;
+        const otherLength = axisIsX ? other.width : other.height;
+        const overlapStart = Math.max(myAlongOrigin, otherAlongOrigin);
+        const overlapEnd = Math.min(myAlongOrigin + myLength, otherAlongOrigin + otherLength);
+        if (overlapEnd <= overlapStart) return;
+        currentDocument.fixtures.forEach((f) => {
+          if (f.wall && f.wall.roomId === other.id && f.wall.side === otherSide) {
+            const worldStart = otherAlongOrigin + f.wall.offset - f.width / 2;
+            const worldEnd = otherAlongOrigin + f.wall.offset + f.width / 2;
+            openings[side].push({ start: worldStart - myAlongOrigin, end: worldEnd - myAlongOrigin, fixtureId: f.id });
+          }
+        });
+      });
     });
     return openings;
   }
