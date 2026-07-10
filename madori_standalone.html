@@ -946,7 +946,7 @@ body {
         <li>ドアや窓が無く、壁がただ途切れているだけの出入口（勝手口など）は「開口部(勝手口・扉なし)」を使うと、記号を何も描かずに壁の枠線だけ途切れさせられます。</li>
         <li>ドア・窓を部屋の壁の近くまでドラッグすると、壁に自動的に開口部ができて向きも合わせてフィットします（壁から離すと解除されます）。</li>
         <li>家具・階段は四隅のハンドルで大きさを変えられます。壁にフィットしていない家具は上に出る丸いハンドルをドラッグすると自由な角度に回せます（90度ボタンも使えます）。</li>
-        <li>部屋・家具をクリックして選んでいる間（水色に光ります）は、矢印キーで少しずつ位置を動かせます。Shiftを押しながら矢印キーで大きさ（壁付けの家具は長さのみ）を変えられます。</li>
+        <li>部屋・家具をクリックして選んでいる間（水色に光ります）は、矢印キーで少しずつ位置を動かせます。Shiftを押しながら矢印キーで大きさ（壁付けの家具は長さのみ）を変えられます。DeleteキーまたはBackspaceキーで削除もできます。</li>
         <li>家具をクリックすると、回転・注釈（高さ等）の編集・複製・削除ができます。部屋を動かすと、中に置いた家具も一緒に付いてきます。</li>
         <li>「➕ テキストを追加」で自由なメモを図の上に置けます。</li>
         <li>画面のドラッグでパン、ホイールでズームできます。「🔍 全体表示」で全体が見える位置に戻ります。</li>
@@ -1220,6 +1220,8 @@ body {
   let onAnnotationClick = null;
   let onDragEnd = null;
   let onZoomChange = null;
+  let onDeleteRequest = null;
+  function setDeleteRequestHandler(h) { onDeleteRequest = h; }
 
   function svgEl(tag, attrs) {
     const el = document.createElementNS(SVG_NS, tag);
@@ -1238,14 +1240,24 @@ body {
   // 選択中の部屋・家具を矢印キーで微調整できるようにする。Shiftを押しながらだと
   // 大きさ（部屋は幅・高さ、壁付け家具は長さのみ）を変える。「リサイズハンドルを
   // 指で正確につまむのが難しい」場合の代替手段、かつ細かい位置調整の手段として。
+  // Delete/Backspaceキーでの削除もここで一緒に扱う（どちらも「選択中の部屋・家具」を
+  // 起点にした操作のため）。
   const NUDGE_STEP = 4;
   function setupKeyboardNudge() {
     document.addEventListener("keydown", (evt) => {
-      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) return;
       const active = document.activeElement;
       if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
       if (!activeHandleOwner) return;
       const [kind, id] = activeHandleOwner.split(/:(.+)/);
+
+      if (evt.key === "Delete" || evt.key === "Backspace") {
+        evt.preventDefault();
+        if (onDeleteRequest) onDeleteRequest(kind, id);
+        setActiveHandleOwner(null);
+        return;
+      }
+
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) return;
       const dxKey = evt.key === "ArrowRight" ? 1 : evt.key === "ArrowLeft" ? -1 : 0;
       const dyKey = evt.key === "ArrowDown" ? 1 : evt.key === "ArrowUp" ? -1 : 0;
       const step = NUDGE_STEP;
@@ -2728,6 +2740,7 @@ body {
     setFixtureClickHandler,
     setAnnotationClickHandler,
     setDragEndHandler,
+    setDeleteRequestHandler,
     GRID,
   };
 })((window.Madori = window.Madori || {}));
@@ -3555,25 +3568,66 @@ body {
   }
 
   // ===== 部屋・家具・テキストの追加/編集/削除 =====
-  function addRoomAtCenter() {
-    const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
-    const center = Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    const room = Madori.createRoom({ x: Math.round(center.x - 70), y: Math.round(center.y - 50) });
-    currentDocument.rooms.push(room);
-    refreshAll();
-  }
-
-  function addTextAtCenter() {
-    const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
-    const center = Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    const annotation = Madori.createAnnotation({ x: Math.round(center.x), y: Math.round(center.y) });
-    currentDocument.annotations.push(annotation);
-    refreshAll();
-  }
-
   function computeViewCenterWorld() {
     const rect = Madori.canvas.getSvgElement().getBoundingClientRect();
     return Madori.canvas.screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
+  function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  // 新しく追加する部屋・家具・テキストが、既にある部屋・家具に重ならない場所を探す。
+  // 新規の部屋を既存の家具の上に重ねて配置してしまうと、その部屋を後でドラッグした時
+  // 「部屋の中に入っている家具を一緒に動かす」既存の仕組み（computeContainedFixtureIds）が
+  // 反応してしまい、無関係な家具（ストーブ等）を意図せず持って行ってしまう不具合につながる。
+  // ツールバー付近（画面左上）から順に、重ならない場所が見つかるまで探す
+  function computeSpawnPosition(width, height) {
+    const svgRect = Madori.canvas.getSvgElement().getBoundingClientRect();
+    const margin = 30;
+    const topLeft = Madori.canvas.screenToWorld(svgRect.left + margin, svgRect.top + margin);
+    const stepX = width + 20;
+    const stepY = height + 20;
+    const existingRects = currentDocument.rooms
+      .map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height }))
+      .concat(
+        currentDocument.fixtures
+          .filter((f) => !f.wall)
+          .map((f) => ({ x: f.x - f.width / 2, y: f.y - f.height / 2, w: f.width, h: f.height }))
+      );
+    for (let row = 0; row < 40; row++) {
+      for (let col = 0; col < 40; col++) {
+        const cx = topLeft.x + width / 2 + col * stepX;
+        const cy = topLeft.y + height / 2 + row * stepY;
+        const overlaps = existingRects.some((r) =>
+          rectsOverlap(cx - width / 2, cy - height / 2, width, height, r.x, r.y, r.w, r.h)
+        );
+        if (!overlaps) return { x: cx, y: cy };
+      }
+    }
+    return computeViewCenterWorld();
+  }
+
+  function addRoomAtCenter() {
+    const defaultWidth = 140;
+    const defaultHeight = 100;
+    const center = computeSpawnPosition(defaultWidth, defaultHeight);
+    const room = Madori.createRoom({
+      x: Math.round(center.x - defaultWidth / 2),
+      y: Math.round(center.y - defaultHeight / 2),
+    });
+    currentDocument.rooms.push(room);
+    refreshAll();
+    if (!Madori.canvas.isWorldPointVisible(room.x, room.y, 40)) {
+      Madori.canvas.fitToView(currentDocument);
+    }
+  }
+
+  function addTextAtCenter() {
+    const center = computeSpawnPosition(80, 30);
+    const annotation = Madori.createAnnotation({ x: Math.round(center.x), y: Math.round(center.y) });
+    currentDocument.annotations.push(annotation);
+    refreshAll();
   }
 
   function placeFixture(fixture) {
@@ -3591,7 +3645,8 @@ body {
       openCustomFixtureModal();
       return;
     }
-    const center = computeViewCenterWorld();
+    const entry = Madori.findCatalogEntry(type);
+    const center = computeSpawnPosition(entry.w, entry.h);
     const fixture = Madori.createFixture(type, { x: Math.round(center.x), y: Math.round(center.y) });
     placeFixture(fixture);
   }
@@ -3617,7 +3672,8 @@ body {
       }
       const shape = document.querySelector('input[name="custom-fixture-shape"]:checked').value;
       cleanup();
-      const center = computeViewCenterWorld();
+      const defaultEntry = Madori.findCatalogEntry(Madori.FixtureType.CUSTOM);
+      const center = computeSpawnPosition(defaultEntry.w, defaultEntry.h);
       const fixture = Madori.createFixture(Madori.FixtureType.CUSTOM, {
         x: Math.round(center.x),
         y: Math.round(center.y),
@@ -3713,6 +3769,21 @@ body {
     // Undo/Redoの対象にする（以前は自動保存だけで、ドラッグ操作はUndoで戻せなかった）
     Madori.canvas.setDragEndHandler(() => {
       refreshAll();
+    });
+
+    // Deleteキーでの削除（ポップアップの🗑削除ボタンと同じ処理。キー操作は連続で押すことも
+    // 多いため、その都度の確認ダイアログは出さずUndoで戻せることを安全網とする）
+    Madori.canvas.setDeleteRequestHandler((kind, id) => {
+      if (kind === "room") {
+        currentDocument.rooms = currentDocument.rooms.filter((r) => r.id !== id);
+        currentDocument.fixtures.forEach((f) => {
+          if (f.wall && f.wall.roomId === id) f.wall = null;
+        });
+        refreshAll();
+      } else if (kind === "fixture") {
+        currentDocument.fixtures = currentDocument.fixtures.filter((f) => f.id !== id);
+        refreshAll();
+      }
     });
 
     Madori.canvas.setZoomChangeHandler((percent) => {

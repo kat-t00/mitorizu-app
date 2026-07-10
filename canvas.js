@@ -50,6 +50,8 @@
   let onAnnotationClick = null;
   let onDragEnd = null;
   let onZoomChange = null;
+  let onDeleteRequest = null;
+  function setDeleteRequestHandler(h) { onDeleteRequest = h; }
 
   function svgEl(tag, attrs) {
     const el = document.createElementNS(SVG_NS, tag);
@@ -68,14 +70,24 @@
   // 選択中の部屋・家具を矢印キーで微調整できるようにする。Shiftを押しながらだと
   // 大きさ（部屋は幅・高さ、壁付け家具は長さのみ）を変える。「リサイズハンドルを
   // 指で正確につまむのが難しい」場合の代替手段、かつ細かい位置調整の手段として。
+  // Delete/Backspaceキーでの削除もここで一緒に扱う（どちらも「選択中の部屋・家具」を
+  // 起点にした操作のため）。
   const NUDGE_STEP = 4;
   function setupKeyboardNudge() {
     document.addEventListener("keydown", (evt) => {
-      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) return;
       const active = document.activeElement;
       if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
       if (!activeHandleOwner) return;
       const [kind, id] = activeHandleOwner.split(/:(.+)/);
+
+      if (evt.key === "Delete" || evt.key === "Backspace") {
+        evt.preventDefault();
+        if (onDeleteRequest) onDeleteRequest(kind, id);
+        setActiveHandleOwner(null);
+        return;
+      }
+
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) return;
       const dxKey = evt.key === "ArrowRight" ? 1 : evt.key === "ArrowLeft" ? -1 : 0;
       const dyKey = evt.key === "ArrowDown" ? 1 : evt.key === "ArrowUp" ? -1 : 0;
       const step = NUDGE_STEP;
@@ -1558,6 +1570,7 @@
     setFixtureClickHandler,
     setAnnotationClickHandler,
     setDragEndHandler,
+    setDeleteRequestHandler,
     GRID,
   };
 })((window.Madori = window.Madori || {}));
