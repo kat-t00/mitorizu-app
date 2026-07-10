@@ -213,7 +213,7 @@
       textCol.appendChild(legendBlock);
     }
 
-    if (noteText) {
+    if (noteText && options && options.includeNote) {
       const noteBlock = document.createElement("div");
       noteBlock.className = "print-note";
       const noteHeading = document.createElement("h3");

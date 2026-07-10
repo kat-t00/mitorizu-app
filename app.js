@@ -101,12 +101,21 @@
     cancelButton.addEventListener("click", handleCancel);
   }
 
-  function loadIntoApp(doc) {
+  // skipAutosave: trueの時は保存データ一覧・localStorageに書き込まない。
+  // 「はじめから作成」をキャンセルした時のフォールバック用の「無題の見取り図」は
+  // ここでtrueにして、ユーザーが実際に何か編集するまで保存データが増えないようにする
+  function loadIntoApp(doc, { skipAutosave } = {}) {
     currentDocument = doc;
     document.getElementById("note-textarea").value = doc.note || "";
     document.getElementById("doc-title-input").value = doc.title || "";
     resetHistory();
-    refreshAll();
+    Madori.canvas.renderDocument(currentDocument);
+    if (!skipAutosave) {
+      Madori.documentStore.autosaveCase(currentDocument);
+      showSavedToast();
+    }
+    renderCaseList();
+    updateUndoRedoButtons();
     Madori.canvas.fitToView(currentDocument);
   }
 
@@ -162,7 +171,14 @@
   function computeSpawnPosition(width, height) {
     const svgRect = Madori.canvas.getSvgElement().getBoundingClientRect();
     const margin = 30;
-    const topLeft = Madori.canvas.screenToWorld(svgRect.left + margin, svgRect.top + margin);
+    // 追加ボタン（「➕ 部屋を追加」等）はキャンバス左上に浮かせて表示しているため、
+    // 単純にsvgの左上からmarginぶんだけ離すと、ちょうどそのボタン群の真下に
+    // 新しい部屋・テキストが出現してしまい、追加直後にボタンへ隠れてスムーズに
+    // ドラッグできない不具合になっていた。ツールバーの実際の高さぶん、開始位置を下げる
+    const toolbar = document.querySelector(".canvas-overlay-toolbars");
+    const toolbarRect = toolbar ? toolbar.getBoundingClientRect() : null;
+    const startTop = toolbarRect ? Math.max(svgRect.top + margin, toolbarRect.bottom + margin) : svgRect.top + margin;
+    const topLeft = Madori.canvas.screenToWorld(svgRect.left + margin, startTop);
     const stepX = width + 20;
     const stepY = height + 20;
     const existingRects = currentDocument.rooms
@@ -473,7 +489,7 @@
         currentFileName = null;
       },
       () => {
-        loadIntoApp(buildFreshDocument({ title: "無題の見取り図" }));
+        loadIntoApp(buildFreshDocument({ title: "無題の見取り図" }), { skipAutosave: true });
       }
     );
   }
@@ -512,6 +528,7 @@
         Madori.documentStore.autosaveCase(currentDocument);
         options.creatorName = currentDocument.creatorName;
         options.includeLegend = document.getElementById("export-include-legend").checked;
+        options.includeNote = document.getElementById("export-include-note").checked;
         options.orientation = document.querySelector('input[name="export-orientation"]:checked').value;
         Madori.exporter.exportToPdf(
           Madori.canvas.getSvgElement(),
