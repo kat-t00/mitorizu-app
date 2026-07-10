@@ -368,6 +368,14 @@ body {
   stroke: none;
 }
 
+/* 開口部(勝手口・扉なし)を、壁に付ける前でも掴めるようにするための編集画面専用の目印。
+   出力(PNG/PDF)には含めない(export.jsのNON_PRINT_SELECTORS参照) */
+.fixture-editor-hint {
+  stroke: #9aa5b1;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
 .fixture-node .fixture-icon {
   fill: #ffffff;
   stroke: #2f3b52;

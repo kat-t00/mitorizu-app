@@ -375,6 +375,14 @@ body {
   stroke: none;
 }
 
+/* 開口部(勝手口・扉なし)を、壁に付ける前でも掴めるようにするための編集画面専用の目印。
+   出力(PNG/PDF)には含めない(export.jsのNON_PRINT_SELECTORS参照) */
+.fixture-editor-hint {
+  stroke: #9aa5b1;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
 .fixture-node .fixture-icon {
   fill: #ffffff;
   stroke: #2f3b52;
@@ -2038,8 +2046,16 @@ body {
         break;
       }
       case T.OPENING: {
-        // 開口部(勝手口・扉なし)：ドアや窓の記号を何も描かず、壁に隙間(開口部)だけを作る。
-        // 見た目には何も描かないのが正しい表現（枠線が途切れていること自体が出入口の目印になる）
+        // 開口部(勝手口・扉なし)：出力物には何も描かないのが正しい表現（枠線が途切れて
+        // いること自体が出入口の目印になる）。ただし編集画面で本当に何も描かないと、
+        // 壁に付ける前（配置直後、壁から離れた場所）は掴む場所が無く選択・移動が一切
+        // できなくなってしまう。そこで画面上でだけ薄い点線の枠を出す
+        // （class="fixture-editor-hint"はNON_PRINT_SELECTORSに含まれており出力時には除去される）
+        add(svgEl("rect", {
+          x: -w / 2, y: -h / 2, width: w, height: h,
+          class: "fixture-editor-hint",
+          fill: "none",
+        }));
         break;
       }
       case T.WINDOW: {
@@ -3035,7 +3051,7 @@ body {
   // 生成に失敗する＝toBlob()がnullを返しcreateObjectURLが例外を投げる）。
   // リサイズハンドル・回転ハンドル・当たり判定用の透明矩形も、印刷物には不要な
   // 操作用UIなので同様に除外する。
-  const NON_PRINT_SELECTORS = ["#layer-grid", ".room-resize-handle", ".fixture-rotate-handle", ".fixture-hit-area"];
+  const NON_PRINT_SELECTORS = ["#layer-grid", ".room-resize-handle", ".fixture-rotate-handle", ".fixture-hit-area", ".fixture-editor-hint"];
 
   function withHiddenNonPrintElements(svgElement, callback) {
     const elements = NON_PRINT_SELECTORS.flatMap((selector) => Array.from(svgElement.querySelectorAll(selector)));

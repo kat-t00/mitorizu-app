@@ -10,7 +10,7 @@
   // 生成に失敗する＝toBlob()がnullを返しcreateObjectURLが例外を投げる）。
   // リサイズハンドル・回転ハンドル・当たり判定用の透明矩形も、印刷物には不要な
   // 操作用UIなので同様に除外する。
-  const NON_PRINT_SELECTORS = ["#layer-grid", ".room-resize-handle", ".fixture-rotate-handle", ".fixture-hit-area"];
+  const NON_PRINT_SELECTORS = ["#layer-grid", ".room-resize-handle", ".fixture-rotate-handle", ".fixture-hit-area", ".fixture-editor-hint"];
 
   function withHiddenNonPrintElements(svgElement, callback) {
     const elements = NON_PRINT_SELECTORS.flatMap((selector) => Array.from(svgElement.querySelectorAll(selector)));
