@@ -341,8 +341,19 @@ body {
 
 .room-resize-handle {
   fill: var(--color-primary);
-  opacity: 0.75;
-  cursor: nwse-resize;
+  opacity: 0.9;
+}
+
+.resize-handle-box {
+  rx: 3;
+}
+
+.resize-handle-arrow {
+  stroke: #ffffff;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+  pointer-events: none;
 }
 
 .rotate-handle-line {
@@ -381,6 +392,14 @@ body {
   stroke: #2f3b52;
   stroke-width: 2;
   color: #2f3b52; /* currentColorを使う矢印などに反映 */
+}
+
+/* 「今どれを選んでいるか」が一目でわかるよう、選択中の部屋・家具にだけ
+   アクセントカラーの光彩(drop-shadow)を付ける。図形の形を問わず使えるので
+   部屋(四角)・家具(様々な形)の両方に共通で適用できる */
+.room-node.is-selected,
+.fixture-node.is-selected {
+  filter: drop-shadow(0 0 3px var(--color-secondary)) drop-shadow(0 0 3px var(--color-secondary));
 }
 
 .fixture-node.fixture-door .fixture-icon,

@@ -62,6 +62,66 @@
   function init(svgElement) {
     svg = svgElement;
     setupPanZoom();
+    setupKeyboardNudge();
+  }
+
+  // 選択中の部屋・家具を矢印キーで微調整できるようにする。Shiftを押しながらだと
+  // 大きさ（部屋は幅・高さ、壁付け家具は長さのみ）を変える。「リサイズハンドルを
+  // 指で正確につまむのが難しい」場合の代替手段、かつ細かい位置調整の手段として。
+  const NUDGE_STEP = 4;
+  function setupKeyboardNudge() {
+    document.addEventListener("keydown", (evt) => {
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(evt.key)) return;
+      const active = document.activeElement;
+      if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
+      if (!activeHandleOwner) return;
+      const [kind, id] = activeHandleOwner.split(/:(.+)/);
+      const dxKey = evt.key === "ArrowRight" ? 1 : evt.key === "ArrowLeft" ? -1 : 0;
+      const dyKey = evt.key === "ArrowDown" ? 1 : evt.key === "ArrowUp" ? -1 : 0;
+      const step = NUDGE_STEP;
+
+      if (kind === "room") {
+        const room = currentDocument.rooms.find((r) => r.id === id);
+        if (!room) return;
+        evt.preventDefault();
+        if (evt.shiftKey) {
+          room.width = Math.max(GRID, room.width + dxKey * step);
+          room.height = Math.max(GRID, room.height + dyKey * step);
+        } else {
+          const containedIds = computeContainedFixtureIds(room);
+          room.x += dxKey * step;
+          room.y += dyKey * step;
+          shiftFixturesByIds(containedIds, dxKey * step, dyKey * step);
+        }
+        if (onDragEnd) onDragEnd();
+        return;
+      }
+
+      if (kind === "fixture") {
+        const fixture = currentDocument.fixtures.find((f) => f.id === id);
+        if (!fixture) return;
+        evt.preventDefault();
+        if (fixture.wall) {
+          const room = currentDocument.rooms.find((r) => r.id === fixture.wall.roomId);
+          if (!room) return;
+          if (evt.shiftKey) {
+            const along = fixture.wall.side === "top" || fixture.wall.side === "bottom" ? dxKey : dyKey;
+            fixture.width = Math.max(GRID, fixture.width + along * step);
+          } else {
+            const along = fixture.wall.side === "top" || fixture.wall.side === "bottom" ? dxKey : dyKey;
+            fixture.wall.offset += along * step;
+          }
+          clampFixtureToWall(fixture, room);
+        } else if (evt.shiftKey) {
+          fixture.width = Math.max(GRID, fixture.width + dxKey * step);
+          fixture.height = Math.max(GRID, fixture.height + dyKey * step);
+        } else {
+          fixture.x += dxKey * step;
+          fixture.y += dyKey * step;
+        }
+        if (onDragEnd) onDragEnd();
+      }
+    });
   }
 
   // ===== パン・ズーム（genogram_webと同じ設計） =====
@@ -606,6 +666,27 @@
     });
   }
 
+  // リサイズハンドル：無地の四角だけだと「ここを掴めば大きさを変えられる」と
+  // 気づきにくい（特にホバーでカーソルが変わらないタッチ操作では手がかりが皆無になる）
+  // という指摘を受けて、斜め方向の両矢印アイコンを重ねて描くようにした。
+  // "\"方向(nwse-resize)の矢印を基準に描き、"/"方向(nesw-resize)は90度回転するだけで作れる
+  // （原点中心の回転で(-4,-4)-(4,4)の線分は(4,-4)-(-4,4)の線分にちょうど一致するため）。
+  function buildResizeHandle(cursor) {
+    const g = svgEl("g", { class: "room-resize-handle" });
+    g.appendChild(svgEl("rect", {
+      x: -HANDLE_SIZE / 2, y: -HANDLE_SIZE / 2, width: HANDLE_SIZE, height: HANDLE_SIZE,
+      class: "resize-handle-box",
+    }));
+    const arrowRotation = cursor === "nesw-resize" ? 90 : 0;
+    const arrow = svgEl("g", { class: "resize-handle-arrow", transform: `rotate(${arrowRotation})` });
+    arrow.appendChild(svgEl("line", { x1: -4, y1: -4, x2: 4, y2: 4 }));
+    arrow.appendChild(svgEl("polyline", { points: "-1,-4 -4,-4 -4,-1", fill: "none" }));
+    arrow.appendChild(svgEl("polyline", { points: "1,4 4,4 4,1", fill: "none" }));
+    g.appendChild(arrow);
+    g.style.cursor = cursor;
+    return g;
+  }
+
   // ===== 部屋 =====
   function addRoomNode(room) {
     const group = svgEl("g", { class: "room-node" });
@@ -651,13 +732,8 @@
     ];
     const cornerHandles = {};
     CORNER_DEFS.forEach((def) => {
-      const el = svgEl("rect", {
-        x: def.dx * room.width - HANDLE_SIZE / 2,
-        y: def.dy * room.height - HANDLE_SIZE / 2,
-        width: HANDLE_SIZE, height: HANDLE_SIZE,
-        class: "room-resize-handle",
-      });
-      el.style.cursor = def.cursor;
+      const el = buildResizeHandle(def.cursor);
+      el.setAttribute("transform", `translate(${def.dx * room.width}, ${def.dy * room.height})`);
       group.appendChild(el);
       cornerHandles[def.key] = el;
     });
@@ -665,8 +741,7 @@
     function repositionCornerHandles() {
       CORNER_DEFS.forEach((def) => {
         const el = cornerHandles[def.key];
-        el.setAttribute("x", def.dx * room.width - HANDLE_SIZE / 2);
-        el.setAttribute("y", def.dy * room.height - HANDLE_SIZE / 2);
+        el.setAttribute("transform", `translate(${def.dx * room.width}, ${def.dy * room.height})`);
       });
     }
 
@@ -677,6 +752,7 @@
       CORNER_DEFS.forEach((def) => {
         cornerHandles[def.key].style.display = isActive ? "" : "none";
       });
+      group.classList.toggle("is-selected", isActive);
     }
     handleVisibilityRefreshers[handleOwnerKey] = refreshHandleVisibility;
     refreshHandleVisibility();
@@ -1170,12 +1246,8 @@
     function handleLocalX(def) { return def.dx === 0 ? -fixture.width / 2 : fixture.width / 2; }
     function handleLocalY(def) { return fixtureTopLocalY(fixture, wallAttachable) + def.dy * fixture.height; }
     cornerDefs.forEach((def) => {
-      const el = svgEl("rect", {
-        x: handleLocalX(def) - HANDLE_SIZE / 2,
-        y: handleLocalY(def) - HANDLE_SIZE / 2,
-        width: HANDLE_SIZE, height: HANDLE_SIZE, class: "room-resize-handle",
-      });
-      el.style.cursor = def.cursor;
+      const el = buildResizeHandle(def.cursor);
+      el.setAttribute("transform", `translate(${handleLocalX(def)}, ${handleLocalY(def)})`);
       group.appendChild(el);
       resizeHandles[def.key] = el;
     });
@@ -1188,6 +1260,7 @@
         resizeHandles[key].style.display = isActive ? "" : "none";
       });
       if (rotateHandle) rotateHandle.style.display = isActive ? "" : "none";
+      group.classList.toggle("is-selected", isActive);
     }
     handleVisibilityRefreshers[handleOwnerKey] = refreshHandleVisibility;
     group.addEventListener("pointerdown", () => setActiveHandleOwner(handleOwnerKey));
@@ -1300,8 +1373,7 @@
       hitRect.setAttribute("height", newHitBox.h);
       cornerDefs.forEach((def) => {
         const el = resizeHandles[def.key];
-        el.setAttribute("x", handleLocalX(def) - HANDLE_SIZE / 2);
-        el.setAttribute("y", handleLocalY(def) - HANDLE_SIZE / 2);
+        el.setAttribute("transform", `translate(${handleLocalX(def)}, ${handleLocalY(def)})`);
       });
       if (rotateKnob) {
         const topY = fixtureTopLocalY(fixture, wallAttachable) - 22;
