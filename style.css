@@ -28,6 +28,11 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /* スマホでポップアップの入力欄にキーボードが出た時、100vhのままだと
+     ブラウザがヘッダーごとページを上にスクロールしてずれてしまうため、
+     キーボード分を差し引いた高さに追従するdvhで上書きする
+     （dvh非対応の古いブラウザでは上のvh指定のまま無視される） */
+  height: 100dvh;
 }
 
 .hidden {
@@ -549,6 +554,7 @@ body {
     bottom: 0;
     width: auto;
     max-height: 60vh;
+    max-height: 60dvh;
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2);
     z-index: 1000;
