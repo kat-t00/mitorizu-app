@@ -7,23 +7,28 @@
   function closePopup() {
     if (activePopup) {
       activePopup.el.remove();
+      document.getElementById("edit-panel-container").classList.remove("is-open");
       activePopup = null;
     }
   }
 
-  // クリックした座標の右下に少しずらして表示。画面端では収まるようクランプする。
-  function positionPopup(el, clientX, clientY) {
-    document.body.appendChild(el);
-    const offset = 16;
-    let left = clientX + offset;
-    let top = clientY + offset;
-    const rect = el.getBoundingClientRect();
-    if (left + rect.width > window.innerWidth - 8) left = window.innerWidth - rect.width - 8;
-    if (top + rect.height > window.innerHeight - 8) top = window.innerHeight - rect.height - 8;
-    if (left < 8) left = 8;
-    if (top < 8) top = 8;
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
+  // 編集パネル（PCでは右サイドパネル、スマホでは下のボトムシート）に中身を差し込む。
+  // 要素の座標とは無関係な固定位置なので、家具を密集させて配置していても
+  // 編集中の要素自体が隠れることがない。
+  function mountPopup(el) {
+    const container = document.getElementById("edit-panel-container");
+    container.innerHTML = "";
+    container.appendChild(el);
+    container.classList.add("is-open");
+  }
+
+  // ボタンを横並びの1行にまとめる（回転/反転、複製/削除など、関連する2つの
+  // ボタンを並べてパネルの縦の高さを詰めるため）
+  function makeButtonRow(...buttons) {
+    const row = document.createElement("div");
+    row.className = "popup-button-row";
+    buttons.forEach((btn) => row.appendChild(btn));
+    return row;
   }
 
   function makePopupShell(title) {
@@ -84,20 +89,19 @@
       callbacks.onDuplicate();
       closePopup();
     });
-    el.appendChild(duplicateBtn);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "popup-delete-button";
-    deleteBtn.textContent = "🗑 この部屋を削除";
+    deleteBtn.textContent = "🗑 削除";
     deleteBtn.addEventListener("click", () => {
       if (!window.confirm(`「${room.label || "この部屋"}」を削除しますか？`)) return;
       callbacks.onDelete();
       closePopup();
     });
-    el.appendChild(deleteBtn);
+    el.appendChild(makeButtonRow(duplicateBtn, deleteBtn));
 
-    positionPopup(el, clientX, clientY);
+    mountPopup(el);
     activePopup = { el, targetKind: "room", targetId: room.id };
   }
 
@@ -123,16 +127,17 @@
     const rotateBtn = document.createElement("button");
     rotateBtn.type = "button";
     rotateBtn.className = "popup-action-button";
-    rotateBtn.textContent = "↻ 90度回転";
+    rotateBtn.title = "90度回転";
+    rotateBtn.textContent = "↻ 回転";
     rotateBtn.addEventListener("click", () => callbacks.onRotate());
-    el.appendChild(rotateBtn);
 
     const flipBtn = document.createElement("button");
     flipBtn.type = "button";
     flipBtn.className = "popup-action-button";
-    flipBtn.textContent = "↔ 左右反転";
+    flipBtn.title = "左右反転";
+    flipBtn.textContent = "↔ 反転";
     flipBtn.addEventListener("click", () => callbacks.onFlip());
-    el.appendChild(flipBtn);
+    el.appendChild(makeButtonRow(rotateBtn, flipBtn));
 
     const labelRow = document.createElement("label");
     labelRow.textContent = isCustom ? "名前（アイコンに表示されます）" : "注釈（任意、例：高さ75cm）";
@@ -152,7 +157,6 @@
       callbacks.onDuplicate();
       closePopup();
     });
-    el.appendChild(duplicateBtn);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
@@ -163,9 +167,9 @@
       callbacks.onDelete();
       closePopup();
     });
-    el.appendChild(deleteBtn);
+    el.appendChild(makeButtonRow(duplicateBtn, deleteBtn));
 
-    positionPopup(el, clientX, clientY);
+    mountPopup(el);
     activePopup = { el, targetKind: "fixture", targetId: fixture.id };
   }
 
@@ -193,7 +197,7 @@
     });
     el.appendChild(deleteBtn);
 
-    positionPopup(el, clientX, clientY);
+    mountPopup(el);
     activePopup = { el, targetKind: "annotation", targetId: annotation.id };
     textArea.focus();
   }

@@ -1489,6 +1489,16 @@
     text.textContent = annotation.text || "";
     group.appendChild(text);
 
+    // 編集パネルが要素から離れた位置に固定表示になったため、「今どれを選んでいるか」が
+    // わかるよう部屋・家具と同じ枠線ハイライトを付ける
+    const handleOwnerKey = `annotation:${annotation.id}`;
+    function refreshHandleVisibility() {
+      group.classList.toggle("is-selected", activeHandleOwner === handleOwnerKey);
+    }
+    handleVisibilityRefreshers[handleOwnerKey] = refreshHandleVisibility;
+    group.addEventListener("pointerdown", () => setActiveHandleOwner(handleOwnerKey));
+    refreshHandleVisibility();
+
     function applyTransform() {
       group.setAttribute("transform", `translate(${annotation.x}, ${annotation.y})`);
     }

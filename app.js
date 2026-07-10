@@ -284,6 +284,29 @@
     cancelBtn.addEventListener("click", handleCancel);
   }
 
+  // スマホ幅では「基本情報・家具」パネルを左からのドロワーとして開閉する。
+  // PC/Macでは常時表示のパネルのままなので、このボタン・背景幕はCSS側で
+  // 非表示になり影響しない。
+  function setupSidePanelDrawer() {
+    const sidePanel = document.querySelector(".side-panel");
+    const backdrop = document.getElementById("side-panel-backdrop");
+    const toggleBtn = document.getElementById("btn-toggle-side-panel");
+
+    function closeDrawer() {
+      sidePanel.classList.remove("is-open");
+      backdrop.classList.remove("visible");
+    }
+    function openDrawer() {
+      sidePanel.classList.add("is-open");
+      backdrop.classList.add("visible");
+    }
+    toggleBtn.addEventListener("click", () => {
+      if (sidePanel.classList.contains("is-open")) closeDrawer();
+      else openDrawer();
+    });
+    backdrop.addEventListener("click", closeDrawer);
+  }
+
   function setupCanvasHandlers() {
     Madori.canvas.setRoomClickHandler((room, clientX, clientY) => {
       Madori.forms.openRoomPopup(room, clientX, clientY, {
@@ -559,6 +582,7 @@
     Madori.canvas.init(document.getElementById("canvas"));
     Madori.forms.renderPalette(document.getElementById("fixture-palette"), addFixtureAtCenter);
     setupCanvasHandlers();
+    setupSidePanelDrawer();
     setupToolbar();
     setupExportOptionsModal();
     setupModalOutsideClickClose();

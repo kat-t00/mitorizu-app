@@ -16,6 +16,7 @@
       </a>
     </div>
     <nav class="toolbar">
+      <button id="btn-toggle-side-panel" class="tool-button side-panel-toggle-btn" type="button">☰ 基本情報・家具</button>
       <button id="btn-new" class="tool-button" type="button">🆕 はじめから作成</button>
       <button id="btn-case-list" class="tool-button" type="button">📁 保存データ一覧</button>
       <button id="btn-save-file" class="tool-button" type="button">💾 データ保存</button>
@@ -28,6 +29,7 @@
   </header>
 
   <div class="app-body">
+    <div id="side-panel-backdrop" class="side-panel-backdrop"></div>
     <aside class="side-panel">
       <h2>📋 基本情報</h2>
       <label class="field-label">対象者名・案件名
@@ -61,6 +63,8 @@
         <span id="zoom-level" class="zoom-percent">100%</span>
         <button id="btn-zoom-in" class="zoom-btn" type="button">＋</button>
       </div>
+
+      <aside id="edit-panel-container" class="edit-panel-container"></aside>
     </main>
   </div>
 
